@@ -1,0 +1,32 @@
+/* Source Form Styles - Medical Dashboard Theme */
+.source-form-container {
+  @apply bg-gradient-to-br from-blue-50 to-white;
+}
+
+.source-form-step {
+  @apply transition-all duration-300 ease-in-out;
+}
+
+.source-form-input {
+  @apply bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-500;
+}
+
+.source-form-button {
+  @apply bg-blue-600 hover:bg-blue-700 text-white;
+}
+
+.source-form-button-outline {
+  @apply border-gray-200 text-gray-600 hover:bg-blue-50;
+}
+
+.source-form-label {
+  @apply text-gray-700 font-medium;
+}
+
+.source-form-description {
+  @apply text-gray-600;
+}
+
+.source-form-card {
+  @apply border-gray-200 bg-white shadow-sm;
+}
