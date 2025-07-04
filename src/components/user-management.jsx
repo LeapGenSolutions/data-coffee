@@ -1,9 +1,15 @@
 /* eslint-disable */
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   Plus,
   MoreHorizontal,
   Shield,
+  Eye,
+  Pencil,
+  Copy,
+  Sparkles,
+  Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -35,8 +41,17 @@ import {
 } from "../components/ui/select";
 import { Label } from "../components/ui/label";
 import { useToast } from "../hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from "../components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
+import { CSSTransition } from 'react-transition-group';
 
 function UserManagement() {
+  console.log('UserManagement component mounted');
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -53,6 +68,23 @@ function UserManagement() {
     autoClose: false
   });
   const { toast } = useToast();
+  const [viewPipeline, setViewPipeline] = useState(null);
+  const [editPipeline, setEditPipeline] = useState(null);
+  const [showPromptModal, setShowPromptModal] = useState(false);
+  const [selectedPrompt, setSelectedPrompt] = useState("");
+  const [promptInput, setPromptInput] = useState("");
+  const [showPromptListModal, setShowPromptListModal] = useState(false);
+  const [promptPipeline, setPromptPipeline] = useState(null);
+  const [showPromptReviewModal, setShowPromptReviewModal] = useState(false);
+  const [reviewPromptContent, setReviewPromptContent] = useState("");
+  const [reviewPromptPipeline, setReviewPromptPipeline] = useState(null);
+  const [showRunPipelineModal, setShowRunPipelineModal] = useState(false);
+  const [runPipelineStatus, setRunPipelineStatus] = useState("running");
+  const runTimeoutRef = useRef(null);
+  const [pipelinePrompts, setPipelinePrompts] = useState({}); // { [pipelineId]: { content, title, timestamp } }
+  const [showPromptAppliedModal, setShowPromptAppliedModal] = useState(false);
+  const [isApplyingPrompt, setIsApplyingPrompt] = useState(false);
+  const [showSuccessTransition, setShowSuccessTransition] = useState(false);
 
   // Sample user data with medical context
   const [users, setUsers] = useState([
@@ -135,6 +167,7 @@ function UserManagement() {
       active: { className: "bg-[#4CAF50] text-white", label: "Completed" },
       inactive: { className: "bg-[#F44336] text-white", label: "Inactive" },
       pending: { className: "bg-[#FF9800] text-white", label: "Pending" },
+      new: { className: "bg-blue-500 text-white", label: "New" },
     };
 
     const config = statusConfig[status.toLowerCase()] || statusConfig.active;
@@ -324,8 +357,132 @@ function UserManagement() {
     );
   };
 
+  const handleClonePipeline = (pipeline) => {
+    // Find all pipelines with the same base name or base name with (n)
+    const baseName = pipeline.name.replace(/ \(\d+\)$/, "");
+    const regex = new RegExp(`^${baseName.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}(?: \\((\\d+)\\))?$`);
+    let maxClone = 0;
+    users.forEach((p) => {
+      const match = p.name.match(regex);
+      if (match && match[1]) {
+        maxClone = Math.max(maxClone, parseInt(match[1], 10));
+      } else if (match) {
+        maxClone = Math.max(maxClone, 0);
+      }
+    });
+    const newName = `${baseName} (${maxClone + 1})`;
+    const newPipeline = {
+      ...pipeline,
+      id: Date.now(),
+      name: newName,
+      created: new Date().toLocaleDateString(),
+      status: "new",
+    };
+    setUsers([...users, newPipeline]);
+    toast({
+      title: "Pipeline Cloned",
+      description: (
+        <span>
+          <b>{newName}</b> was created. <Button variant="link" className="p-0 ml-2 text-blue-600" onClick={() => setEditPipeline(newPipeline)}>Edit now</Button>
+        </span>
+      ),
+    });
+  };
+
+  const aiPrompts = [
+    {
+      title: "Enhance Data Quality",
+      description: "Improve data validation and cleansing processes to assure high-quality analytics.",
+      content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
+    },
+    {
+      title: "Automate Anonymization",
+      description: "Implement automated patient data anonymization using advanced AI techniques.",
+      content: "Implement automated patient data anonymization using advanced AI techniques for privacy compliance.",
+    },
+    {
+      title: "Real-time Processing",
+      description: "Enable real-time data processing for critical patient and clinical workflows.",
+      content: "Enable real-time data processing for critical patient and clinical workflows.",
+    },
+    {
+      title: "Cross-System Integration",
+      description: "Create seamless integration between EMR systems, labs, and analytics platforms.",
+      content: "Create seamless integration between EMR systems, labs, and analytics platforms for unified data access.",
+    },
+  ];
+
+  // Add mock prompt history and suggested prompt for demonstration
+  const getPipelinePrompts = (pipeline) => {
+    // In a real app, fetch from backend or pipeline object
+    return {
+      suggestedPrompt: {
+        title: "Enhance Data Quality",
+        description: "Improve data validation and cleansing processes to assure high-quality analytics.",
+        content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
+        timestamp: "2024-07-01 10:00",
+      },
+      promptHistory: [
+        {
+          title: "Automate Anonymization",
+          description: "Implement automated patient data anonymization using advanced AI techniques.",
+          content: "Implement automated patient data anonymization using advanced AI techniques for privacy compliance.",
+          timestamp: "2024-06-28 09:30",
+        },
+        {
+          title: "Real-time Processing",
+          description: "Enable real-time data processing for critical patient and clinical workflows.",
+          content: "Enable real-time data processing for critical patient and clinical workflows.",
+          timestamp: "2024-06-20 14:15",
+        },
+      ],
+    };
+  };
+
+  const handleManualRerun = (pipeline) => {
+    setReviewPromptPipeline(pipeline);
+    setShowRunPipelineModal(true);
+    setRunPipelineStatus("running");
+    if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
+    runTimeoutRef.current = setTimeout(() => {
+      setRunPipelineStatus("completed");
+      setUsers(users => users.map(p =>
+        p.id === pipeline.id ? { ...p, status: "Completed" } : p
+      ));
+    }, 2500);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Applying Prompt Full-Screen Overlay */}
+      <CSSTransition
+        in={isApplyingPrompt}
+        timeout={300}
+        classNames="fade"
+        unmountOnExit
+      >
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(255,255,255,0.96)',
+            zIndex: 99999,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {/* Simple spinner animation */}
+          <div className="custom-spinner" style={{ marginBottom: 32 }}></div>
+          <div style={{ color: '#1e293b', fontSize: 20, fontWeight: 500, textAlign: 'center' }}>
+            Updating prompt and applying changes to the pipeline…
+          </div>
+        </div>
+      </CSSTransition>
       {/* Header Section - Medical theme with blue gradient */}
       <div className="bg-gradient-to-r from-[#2196F3] to-[#1976D2] text-white p-6 rounded-lg">
         <div className="flex items-center justify-between">
@@ -729,75 +886,394 @@ function UserManagement() {
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#2196F3] border-blue-600">
-                <TableHead className="text-white font-medium">
-                  Pipeline Name
-                </TableHead>
-                <TableHead className="text-white font-medium">Source</TableHead>
-                <TableHead className="text-white font-medium">
-                  Destination
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Technique
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Agent
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Schedule
-                </TableHead>
-                <TableHead className="text-white font-medium">Status</TableHead>
-                <TableHead className="text-white font-medium">
-                  Created
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((pipeline) => (
-                <TableRow
-                  key={pipeline.id}
-                  className="bg-white hover:bg-gray-50 border-gray-200"
-                >
-                  <TableCell className="font-medium text-gray-900">
-                    {pipeline.name}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {pipeline.source}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {pipeline.destination}
-                  </TableCell>
-                  <TableCell>{getTechniqueBadge(pipeline.technique)}</TableCell>
-                  <TableCell className="text-gray-600">
-                    {pipeline.processingAgent || "Not specified"}
-                  </TableCell>
-                  <TableCell className="text-gray-600">
-                    {pipeline.schedule || "Not configured"}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(pipeline.status)}</TableCell>
-                  <TableCell className="text-gray-600">
-                    {pipeline.created}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <div className="bg-white rounded-lg border border-gray-200">
+           <Table
+             className="w-full table-fixed"
+           >
+             <TableHeader>
+               <TableRow className="bg-[#2196F3] border-blue-600">
+                 <TableHead className="text-white font-medium">
+                   Pipeline Name
+                 </TableHead>
+                 <TableHead className="text-white font-medium">Source</TableHead>
+                 <TableHead className="text-white font-medium">
+                   Destination
+                 </TableHead>
+                 <TableHead className="text-white font-medium">
+                   Technique
+                 </TableHead>
+                 <TableHead className="text-white font-medium">
+                   Agent
+                 </TableHead>
+                 <TableHead className="text-white font-medium">
+                   Schedule
+                 </TableHead>
+                 <TableHead className="text-white font-medium">Status</TableHead>
+                 <TableHead className="text-white font-medium">
+                   Created
+                 </TableHead>
+                 <TableHead className="text-white font-medium">
+                   Actions
+                 </TableHead>
+                 <TableHead className="text-white font-medium">
+                   Thought Bubble
+                 </TableHead>
+               </TableRow>
+             </TableHeader>
+             <TableBody>
+               {users.map((pipeline) => (
+                 <TableRow
+                   key={pipeline.id}
+                   className="bg-white hover:bg-gray-50 border-gray-200"
+                 >
+                   <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-normal">
+                     {pipeline.name}
+                   </TableCell>
+                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                     {pipeline.source}
+                   </TableCell>
+                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                     {pipeline.destination}
+                   </TableCell>
+                   <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                     {pipeline.processingAgent || "Not specified"}
+                   </TableCell>
+                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                     {pipeline.schedule || "Not configured"}
+                   </TableCell>
+                   <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                     {pipeline.created}
+                   </TableCell>
+                   <TableCell>
+                     <DropdownMenu>
+                       <DropdownMenuTrigger asChild>
+                         <Button
+                           variant="ghost"
+                           className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                         >
+                           <MoreHorizontal className="h-4 w-4" />
+                         </Button>
+                       </DropdownMenuTrigger>
+                       <DropdownMenuContent align="end">
+                         <DropdownMenuItem
+                           onClick={() => setEditPipeline(pipeline)}
+                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                         >
+                           <Pencil className="h-4 w-4 text-blue-500" /> Edit
+                         </DropdownMenuItem>
+                         <DropdownMenuItem
+                           onClick={() => setViewPipeline(pipeline)}
+                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                         >
+                           <Eye className="h-4 w-4 text-blue-500" /> View
+                         </DropdownMenuItem>
+                         <DropdownMenuItem
+                           onClick={() => handleClonePipeline(pipeline)}
+                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                         >
+                           <Copy className="h-4 w-4 text-blue-500" /> Clone
+                         </DropdownMenuItem>
+                         <DropdownMenuItem
+                           onClick={() => handleManualRerun(pipeline)}
+                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                         >
+                           <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run Manually
+                         </DropdownMenuItem>
+                       </DropdownMenuContent>
+                     </DropdownMenu>
+                   </TableCell>
+                   <TableCell className="whitespace-normal p-1 min-w-[100px] max-w-[140px] text-sm">
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       className="flex items-center gap-2 font-semibold text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50 px-2 py-1 text-sm"
+                       onClick={() => {
+                         setPromptPipeline(pipeline);
+                         setShowPromptListModal(true);
+                       }}
+                     >
+                       <Sparkles className="h-4 w-4 text-purple-500" />
+                     </Button>
+                   </TableCell>
+                 </TableRow>
+               ))}
+             </TableBody>
+           </Table>
+         </div>
       </div>
+      {!isApplyingPrompt && !showSuccessTransition && (
+        <>
+          {/* View Pipeline Modal */}
+          <Dialog open={!!viewPipeline} onOpenChange={(open) => { if (!open) setViewPipeline(null); }}>
+            <DialogContent className="sm:max-w-[500px] bg-white">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">Pipeline Details</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  View configuration and details for this pipeline.
+                </DialogDescription>
+              </DialogHeader>
+              {viewPipeline && (
+                <div className="space-y-4 py-2">
+                  <div><span className="font-semibold">Pipeline Name:</span> {viewPipeline.name}</div>
+                  <div><span className="font-semibold">Source:</span> {viewPipeline.source}</div>
+                  <div><span className="font-semibold">Destination:</span> {viewPipeline.destination}</div>
+                  <div><span className="font-semibold">Technique:</span> {viewPipeline.technique}</div>
+                  <div><span className="font-semibold">Agent:</span> {viewPipeline.processingAgent || "Not specified"}</div>
+                  <div><span className="font-semibold">Schedule:</span> {viewPipeline.schedule || "Not configured"}</div>
+                  <div><span className="font-semibold">Status:</span> {viewPipeline.status}</div>
+                  <div><span className="font-semibold">Created:</span> {viewPipeline.created}</div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button onClick={() => setViewPipeline(null)} className="bg-[#2196F3] hover:bg-[#1976D2] text-white w-full">Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          {/* Edit AI Prompt Modal */}
+          <Dialog open={showPromptModal} onOpenChange={setShowPromptModal}>
+            <DialogContent className="sm:max-w-[600px] bg-white">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">Edit AI Prompt</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  You can modify the AI prompt before applying it to the pipeline. The prompt will help optimize your pipeline processing.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="font-semibold text-gray-900 mb-1">Prompt Content</div>
+              <div className="text-sm text-gray-600 mb-2">Edit the prompt below to customize how AI will process this pipeline:</div>
+              <textarea
+                className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={6}
+                value={promptInput}
+                onChange={e => setPromptInput(e.target.value)}
+                maxLength={1000}
+              />
+              <div className="text-xs text-gray-400 mt-1">Characters: {promptInput.length}</div>
+              <DialogFooter className="mt-4 flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowPromptModal(false)}>Cancel</Button>
+                <Button
+                  className="bg-[#2563eb] hover:bg-[#1d4ed8] text-white"
+                  onClick={() => {
+                    alert('Apply Prompt clicked');
+                    console.log('Apply Prompt button clicked');
+                    setShowPromptModal(false);
+                    setIsApplyingPrompt(true);
+                    setTimeout(() => {
+                      setIsApplyingPrompt(false);
+                      setShowSuccessTransition(true);
+                      setTimeout(() => {
+                        setShowSuccessTransition(false);
+                        setShowPromptAppliedModal(true);
+                      }, 500); // short transition before showing success modal
+                    }, 5000); // 5 seconds
+                  }}
+                >
+                  Apply Prompt to Pipeline
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          {/* AI Prompts List Modal */}
+          <Dialog open={showPromptListModal} onOpenChange={setShowPromptListModal}>
+            <DialogContent className="sm:max-w-[650px] bg-white rounded-lg shadow-lg p-6 m-4">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">
+                  AI Prompts for {promptPipeline ? promptPipeline.name : "Pipeline"}
+                </DialogTitle>
+              </DialogHeader>
+              {promptPipeline && (() => {
+                const { suggestedPrompt, promptHistory } = getPipelinePrompts(promptPipeline);
+                return (
+                  <>
+                    {/* Suggested Prompt */}
+                    <div className="mb-6">
+                      <div className="flex items-center mb-2">
+                        <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-1 rounded mr-2">Suggested</span>
+                        <span className="text-xs text-gray-400">{suggestedPrompt.timestamp}</span>
+                        {pipelinePrompts[promptPipeline?.id]?.content === suggestedPrompt.content && (
+                          <span className="ml-2 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">Currently in use</span>
+                        )}
+                      </div>
+                      <div className="bg-blue-50 rounded-lg border border-blue-200 shadow p-5 flex items-start gap-4">
+                        <span className="flex-shrink-0 bg-purple-100 rounded-full p-3 flex items-center justify-center">
+                          <Sparkles className="h-6 w-6 text-purple-500" />
+                        </span>
+                        <span className="flex-1">
+                          <div className="font-bold text-gray-900 text-lg mb-1">{suggestedPrompt.title}</div>
+                          <div className="text-sm text-gray-700 mb-3">{suggestedPrompt.description}</div>
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
+                            onClick={() => {
+                              setReviewPromptContent(suggestedPrompt.content);
+                              setReviewPromptPipeline(promptPipeline);
+                              setShowPromptReviewModal(true);
+                              setShowPromptListModal(false);
+                            }}
+                          >
+                            Use Prompt
+                          </Button>
+                        </span>
+                      </div>
+                    </div>
+                    {/* Prompt Version History */}
+                    <div>
+                      <div className="font-semibold text-gray-800 mb-3 text-base">Prompt Version History</div>
+                      <div className="space-y-4">
+                        {promptHistory.map((prompt, idx) => (
+                          <div
+                            key={prompt.title + prompt.timestamp}
+                            className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-4 flex items-start gap-3"
+                          >
+                            <span className="flex-shrink-0 bg-purple-100 rounded-full p-2 flex items-center justify-center">
+                              <Sparkles className="h-5 w-5 text-purple-500" />
+                            </span>
+                            <span className="flex-1">
+                              <div className="font-semibold text-gray-900 text-base mb-1">{prompt.title}</div>
+                              <div className="text-sm text-gray-600 mb-2">{prompt.description}</div>
+                              <div className="text-xs text-gray-400 mb-2">{prompt.timestamp}</div>
+                              {pipelinePrompts[promptPipeline?.id]?.content === prompt.content ? (
+                                <span className="ml-2 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">Currently in use</span>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="mt-1 border-blue-500 text-blue-700 hover:bg-blue-50"
+                                  onClick={() => {
+                                    setReviewPromptContent(prompt.content);
+                                    setReviewPromptPipeline(promptPipeline);
+                                    setShowPromptReviewModal(true);
+                                    setShowPromptListModal(false);
+                                  }}
+                                >
+                                  Revert to this Prompt
+                                </Button>
+                              )}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+          {/* Prompt Review Modal */}
+          <Dialog open={showPromptReviewModal} onOpenChange={setShowPromptReviewModal}>
+            <DialogContent className="sm:max-w-[600px] bg-white rounded-lg shadow-lg p-6">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900">Review & Apply AI Prompt</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  Review or edit the prompt before applying it to the pipeline.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-gray-500">Prompt Content</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-1 text-gray-700 hover:text-blue-600"
+                  onClick={() => {
+                    navigator.clipboard.writeText(reviewPromptContent);
+                    toast({ title: "Prompt copied!" });
+                  }}
+                >
+                  <Copy className="h-4 w-4" /> Copy
+                </Button>
+              </div>
+              <textarea
+                className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                rows={6}
+                value={reviewPromptContent}
+                onChange={e => setReviewPromptContent(e.target.value)}
+                maxLength={1000}
+              />
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="outline" onClick={() => setShowPromptReviewModal(false)}>Cancel</Button>
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    setShowPromptReviewModal(false);
+                    setIsApplyingPrompt(true);
+                    // Update the pipeline's current prompt
+                    const pipelineId = (reviewPromptPipeline?.id || promptPipeline?.id);
+                    setPipelinePrompts(prev => ({
+                      ...prev,
+                      [pipelineId]: {
+                        content: reviewPromptContent,
+                        title: selectedPrompt || "Custom Prompt",
+                        timestamp: new Date().toLocaleString(),
+                      }
+                    }));
+                    setTimeout(() => {
+                      setIsApplyingPrompt(false);
+                      setShowSuccessTransition(true);
+                      setTimeout(() => {
+                        setShowSuccessTransition(false);
+                        setShowPromptAppliedModal(true);
+                      }, 500); // short transition before showing success modal
+                    }, 3000); // 3 seconds
+                  }}
+                >
+                  Apply Prompt
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+          {/* Run Pipeline Modal */}
+          <Dialog open={showRunPipelineModal} onOpenChange={setShowRunPipelineModal}>
+            <DialogContent className="sm:max-w-[400px] bg-white rounded-lg shadow-lg p-6 flex flex-col items-center">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900 w-full text-center">
+                  {runPipelineStatus === "running" ? "Pipeline Running" : "Pipeline Completed"}
+                </DialogTitle>
+              </DialogHeader>
+              {runPipelineStatus === "running" ? (
+                <>
+                  <Loader2 className="animate-spin h-12 w-12 text-blue-500 my-6" />
+                  <div className="text-gray-700 text-center">Your pipeline is being processed...</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-green-600 text-3xl my-6">✔</div>
+                  <div className="text-gray-700 text-center mb-2">Pipeline completed successfully!</div>
+                  <div className="flex gap-2 mt-2">
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setShowRunPipelineModal(false)}>
+                      Close
+                    </Button>
+                    <Button variant="outline" className="flex items-center gap-2" onClick={() => {
+                      setRunPipelineStatus("running");
+                      if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
+                      runTimeoutRef.current = setTimeout(() => {
+                        setRunPipelineStatus("completed");
+                        setUsers(users => users.map(p =>
+                          p.id === (reviewPromptPipeline?.id || promptPipeline?.id) ? { ...p, status: "Completed" } : p
+                        ));
+                      }, 2500);
+                    }}>
+                      <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run
+                    </Button>
+                  </div>
+                </>
+              )}
+            </DialogContent>
+          </Dialog>
+          {/* Prompt Applied Confirmation Modal */}
+          <Dialog open={showPromptAppliedModal} onOpenChange={setShowPromptAppliedModal}>
+            <DialogContent className="sm:max-w-[400px] bg-white rounded-lg shadow-lg p-6 flex flex-col items-center">
+              <DialogHeader>
+                <DialogTitle className="text-gray-900 w-full text-center">Changes Applied</DialogTitle>
+              </DialogHeader>
+              <div className="text-gray-700 text-center my-4">The prompt has been applied and the pipeline configuration is updated.</div>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white mt-2" onClick={() => setShowPromptAppliedModal(false)}>
+                Close
+              </Button>
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
     </div>
   );
 }
