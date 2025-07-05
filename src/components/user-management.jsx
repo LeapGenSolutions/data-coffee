@@ -85,6 +85,9 @@ function UserManagement() {
   const [showPromptAppliedModal, setShowPromptAppliedModal] = useState(false);
   const [isApplyingPrompt, setIsApplyingPrompt] = useState(false);
   const [showSuccessTransition, setShowSuccessTransition] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [enableSurroundAI, setEnableSurroundAI] = useState(false);
+  const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
 
   // Sample user data with medical context
   const [users, setUsers] = useState([
@@ -242,7 +245,7 @@ function UserManagement() {
     }
 
     if (currentStep === 3) {
-      if (!selectedProcessingAgent) {
+      if (!selectedProcessingAgent && !isEditing) {
         toast({
           title: "Validation Error",
           description: "Please select a processing agent",
@@ -265,7 +268,7 @@ function UserManagement() {
       }
 
       const pipeline = {
-        id: Date.now(),
+        id: isEditing && editPipeline ? editPipeline.id : Date.now(),
         name: newUser.name,
         source: newUser.sourceDatabase,
         destination:
@@ -277,20 +280,24 @@ function UserManagement() {
         schedule: runConfiguration.schedule,
         notifications: runConfiguration.notifications,
         autoClose: runConfiguration.autoClose,
-        status: "Active",
-        created: new Date().toLocaleDateString(),
+        status: newUser.status || "Active",
+        created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
         destinationType,
         connectionString,
+        enableSurroundAI,
       };
 
-      setUsers([...users, pipeline]);
+      if (isEditing && editPipeline) {
+        setUsers(users => users.map(u => u.id === pipeline.id ? pipeline : u));
+        toast({ title: "Pipeline Updated", description: `${pipeline.name} has been updated.` });
+      } else {
+        setUsers([...users, pipeline]);
+        toast({ title: "Pipeline Created", description: `${pipeline.name} has been added to the system` });
+      }
       resetForm();
       setShowCreateUserDialog(false);
-
-      toast({
-        title: "Pipeline Created",
-        description: `${pipeline.name} has been added to the system`,
-      });
+      setIsEditing(false);
+      setEditPipeline(null);
     }
   };
 
@@ -312,6 +319,7 @@ function UserManagement() {
       notifications: false,
       autoClose: false
     });
+    setEnableSurroundAI(false);
   };
 
   const handleBack = () => {
@@ -452,6 +460,30 @@ function UserManagement() {
     }, 2500);
   };
 
+  const handleEditPipeline = (pipeline) => {
+    setIsEditing(true);
+    setEditPipeline(pipeline);
+    setShowCreateUserDialog(true);
+    setCurrentStep(1);
+    setNewUser({
+      name: pipeline.name,
+      sourceDatabase: pipeline.source,
+      destinationDatabase: pipeline.destinationType === "dataset" ? pipeline.destination : "",
+      techniques: pipeline.technique ? pipeline.technique.split(", ") : [],
+      status: pipeline.status,
+    });
+    setSelectedTechniques(pipeline.technique ? pipeline.technique.split(", ") : []);
+    setDestinationType(pipeline.destinationType || "dataset");
+    setConnectionString(pipeline.destinationType === "connection" ? pipeline.connectionString : "");
+    setSelectedProcessingAgent(pipeline.processingAgent || "");
+    setRunConfiguration({
+      schedule: pipeline.schedule || "",
+      notifications: pipeline.notifications || false,
+      autoClose: pipeline.autoClose || false,
+    });
+    setEnableSurroundAI(!!pipeline.enableSurroundAI);
+  };
+
   return (
     <div className="space-y-6">
       {/* Applying Prompt Full-Screen Overlay */}
@@ -513,7 +545,11 @@ function UserManagement() {
             open={showCreateUserDialog}
             onOpenChange={(open) => {
               setShowCreateUserDialog(open);
-              if (!open) resetForm();
+              if (!open) {
+                resetForm();
+                setIsEditing(false);
+                setEditPipeline(null);
+              }
             }}
           >
             <DialogTrigger asChild>
@@ -777,18 +813,25 @@ function UserManagement() {
                     <p className="text-sm text-gray-600 mb-4">
                       Choose the engine or service that will perform data masking, redaction, anonymization, or tokenization.
                     </p>
-                    <Select value={selectedProcessingAgent} onValueChange={setSelectedProcessingAgent}>
-                      <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
-                        <SelectValue placeholder="Select a processing agent" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="Redaction Agent">Redaction Agent</SelectItem>
-                        <SelectItem value="Tokenization Agent">Tokenization Agent</SelectItem>
-                        <SelectItem value="Anonymization Agent">Anonymization Agent</SelectItem>
-                        <SelectItem value="Custom Processing Agent">Custom Processing Agent</SelectItem>
-                        <SelectItem value="AI-Based Privacy Agent">AI-Based Privacy Agent</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {isEditing ? (
+                      <>
+                        <Input value={selectedProcessingAgent} disabled className="bg-gray-100" />
+                        <div className="text-xs text-gray-500 mt-2">Agent cannot be changed during edit.</div>
+                      </>
+                    ) : (
+                      <Select value={selectedProcessingAgent} onValueChange={setSelectedProcessingAgent}>
+                        <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
+                          <SelectValue placeholder="Select a processing agent" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="Redaction Agent">Redaction Agent</SelectItem>
+                          <SelectItem value="Tokenization Agent">Tokenization Agent</SelectItem>
+                          <SelectItem value="Anonymization Agent">Anonymization Agent</SelectItem>
+                          <SelectItem value="Custom Processing Agent">Custom Processing Agent</SelectItem>
+                          <SelectItem value="AI-Based Privacy Agent">AI-Based Privacy Agent</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
               )}
@@ -847,6 +890,43 @@ function UserManagement() {
                         </div>
                       </div>
                     </div>
+                    <div className="flex items-center mt-4">
+                      <Checkbox
+                        id="enableSurroundAI"
+                        checked={enableSurroundAI}
+                        onCheckedChange={setEnableSurroundAI}
+                      />
+                      <Label htmlFor="enableSurroundAI" className="ml-2">
+                        Enable Surround AI
+                      </Label>
+                    </div>
+                    {isEditing && (
+                      <div className="mt-4">
+                        <Button variant="outline" onClick={() => setShowSurroundAIConfig(true)}>
+                          Reconfigure Surround AI
+                        </Button>
+                        <Dialog open={showSurroundAIConfig} onOpenChange={setShowSurroundAIConfig}>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Reconfigure Surround AI</DialogTitle>
+                            </DialogHeader>
+                            <div className="flex items-center mt-4">
+                              <Checkbox
+                                id="editEnableSurroundAI"
+                                checked={enableSurroundAI}
+                                onCheckedChange={setEnableSurroundAI}
+                              />
+                              <Label htmlFor="editEnableSurroundAI" className="ml-2">
+                                Enable Surround AI
+                              </Label>
+                            </div>
+                            <DialogFooter>
+                              <Button onClick={() => setShowSurroundAIConfig(false)}>Done</Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -958,7 +1038,7 @@ function UserManagement() {
                        </DropdownMenuTrigger>
                        <DropdownMenuContent align="end">
                          <DropdownMenuItem
-                           onClick={() => setEditPipeline(pipeline)}
+                           onClick={() => handleEditPipeline(pipeline)}
                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
                          >
                            <Pencil className="h-4 w-4 text-blue-500" /> Edit
