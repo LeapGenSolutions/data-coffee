@@ -28,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { useToast } from "../hooks/use-toast";
+import { toast } from "./ui/toaster.jsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import {
   ChevronRight,
@@ -37,6 +37,7 @@ import {
   Globe,
   CheckCircle,
 } from "lucide-react";
+import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 
 // Define basic schema and schemas for each source type and location
 const baseSchema = z.object({
@@ -196,7 +197,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
-  const { toast } = useToast();
+  const testAzureBlobConnection = useTestAzureBlobConnection();
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -439,23 +440,6 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
     onComplete();
   };
 
-  // Test connection
-  const handleTestConnection = () => {
-    const isValid = form.trigger();
-
-    if (isValid) {
-      toast({
-        title: "Connection Percolating Successfully ☕",
-        description: "We've successfully connected to your data beans source!",
-      });
-    } else {
-      toast({
-        title: "Connection Failed to Brew",
-        description: "Please check your credentials and try again",
-        variant: "destructive",
-      });
-    }
-  };
 
   // Navigation between steps
   const nextStep = () => {
@@ -844,7 +828,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
                     All files will be uploaded and processed. Choose your file below:
                   </p>
                 </div>
-                
+
                 {/* File Upload Component */}
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="text-center">
@@ -856,11 +840,11 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
                         <span className="mt-2 block text-sm font-medium text-gray-900">
                           Drop files here or click to upload
                         </span>
-                        <input 
-                          id="file-upload" 
-                          name="file-upload" 
-                          type="file" 
-                          className="sr-only" 
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          className="sr-only"
                           multiple
                           accept=".csv,.xlsx,.xls,.json,.parquet,.xml,.txt,.png,.jpeg,.jpg,.pdf"
                           onChange={(e) => {
@@ -904,7 +888,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
               <div className="space-y-4">
                 <div className="bg-white p-4 rounded-md border border-gray-200">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Select Specific Sheets/Columns</h4>
-                  
+
                   {/* File Upload */}
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
                     <div className="text-center">
@@ -913,9 +897,9 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
                       </svg>
                       <label htmlFor="specific-file-upload" className="cursor-pointer">
                         <span className="text-sm font-medium text-gray-900">Upload Excel or CSV file</span>
-                        <input 
-                          id="specific-file-upload" 
-                          type="file" 
+                        <input
+                          id="specific-file-upload"
+                          type="file"
                           className="sr-only"
                           accept=".xlsx,.xls,.csv"
                           onChange={(e) => {
@@ -936,22 +920,22 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
                   {selectedTables.length > 0 && (
                     <div className="mt-4 space-y-3">
                       <p className="text-sm font-medium text-gray-900">Select Sheets and Columns:</p>
-                      
+
                       {selectedTables.map((sheet, index) => (
                         <div key={sheet} className="border border-gray-200 rounded-lg p-3 bg-white">
                           <div className="flex items-center justify-between mb-2">
                             <label className="flex items-center space-x-2">
-                              <input 
-                                type="checkbox" 
-                                defaultChecked 
+                              <input
+                                type="checkbox"
+                                defaultChecked
                                 className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                               />
                               <span className="text-sm font-medium text-gray-900">{sheet}</span>
                             </label>
-                            <button 
+                            <button
                               onClick={() => {
-                                setExpandedTables(prev => 
-                                  prev.includes(sheet) 
+                                setExpandedTables(prev =>
+                                  prev.includes(sheet)
                                     ? prev.filter(t => t !== sheet)
                                     : [...prev, sheet]
                                 );
@@ -961,13 +945,13 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
                               {expandedTables.includes(sheet) ? "Hide Columns" : "Show Columns"}
                             </button>
                           </div>
-                          
+
                           {expandedTables.includes(sheet) && (
                             <div className="ml-6 grid grid-cols-2 gap-2 mt-2">
                               {(tableColumns[sheet] || ["Column A", "Column B", "Column C", "Column D"]).map(column => (
                                 <label key={column} className="flex items-center space-x-2">
-                                  <input 
-                                    type="checkbox" 
+                                  <input
+                                    type="checkbox"
                                     defaultChecked
                                     className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                   />
@@ -1559,94 +1543,94 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-              {
-                name: "host",
-                label: "Hostname / IP",
-                placeholder: "localhost or IP address",
-              },
-              {
-                name: "port",
-                label: "Port",
-                placeholder: "1433",
-                type: "number",
-              },
-              {
-                name: "authType",
-                label: "Authentication Type",
-                type: "select",
-                placeholder: "Select authentication method",
-                options: [
-                  { value: "windows", label: "Windows Authentication" },
-                  { value: "sql", label: "SQL Server Authentication" },
-                ],
-              },
-              {
-                name: "username",
-                label: "Username",
-                placeholder: "Database username",
-              },
-              {
-                name: "password",
-                label: "Password",
-                placeholder: "Database password",
-                type: "password",
-              },
-              {
-                name: "dbName",
-                label: "Database Name",
-                placeholder: "Database name",
-              },
-              {
-                name: "driver",
-                label: "Driver",
-                type: "select",
-                placeholder: "Select driver type",
-                options: [
-                  { value: "odbc", label: "ODBC" },
-                  { value: "jdbc", label: "JDBC" },
-                ],
-              },
-            ]
+            {
+              name: "host",
+              label: "Hostname / IP",
+              placeholder: "localhost or IP address",
+            },
+            {
+              name: "port",
+              label: "Port",
+              placeholder: "1433",
+              type: "number",
+            },
+            {
+              name: "authType",
+              label: "Authentication Type",
+              type: "select",
+              placeholder: "Select authentication method",
+              options: [
+                { value: "windows", label: "Windows Authentication" },
+                { value: "sql", label: "SQL Server Authentication" },
+              ],
+            },
+            {
+              name: "username",
+              label: "Username",
+              placeholder: "Database username",
+            },
+            {
+              name: "password",
+              label: "Password",
+              placeholder: "Database password",
+              type: "password",
+            },
+            {
+              name: "dbName",
+              label: "Database Name",
+              placeholder: "Database name",
+            },
+            {
+              name: "driver",
+              label: "Driver",
+              type: "select",
+              placeholder: "Select driver type",
+              options: [
+                { value: "odbc", label: "ODBC" },
+                { value: "jdbc", label: "JDBC" },
+              ],
+            },
+          ]
           : [
-              {
-                name: "cloudProvider",
-                label: "Cloud Provider",
-                type: "select",
-                placeholder: "Select cloud provider",
-                options: [
-                  { value: "azure", label: "Azure SQL" },
-                  { value: "aws", label: "AWS RDS" },
-                  { value: "gcp", label: "Google Cloud SQL" },
-                ],
-              },
-              {
-                name: "connectionString",
-                label: "Connection String",
-                placeholder: "Full connection string",
-                type: "textarea",
-              },
-              {
-                name: "port",
-                label: "Port",
-                placeholder: "1433",
-                type: "number",
-              },
-              {
-                name: "authType",
-                label: "Auth Type",
-                type: "select",
-                options: [
-                  { value: "managed", label: "Managed Identity" },
-                  { value: "sql", label: "SQL Authentication" },
-                ],
-              },
-              {
-                name: "sslRequired",
-                label: "SSL Required",
-                type: "toggle",
-                toggleLabel: "Require SSL connection",
-              },
-            ];
+            {
+              name: "cloudProvider",
+              label: "Cloud Provider",
+              type: "select",
+              placeholder: "Select cloud provider",
+              options: [
+                { value: "azure", label: "Azure SQL" },
+                { value: "aws", label: "AWS RDS" },
+                { value: "gcp", label: "Google Cloud SQL" },
+              ],
+            },
+            {
+              name: "connectionString",
+              label: "Connection String",
+              placeholder: "Full connection string",
+              type: "textarea",
+            },
+            {
+              name: "port",
+              label: "Port",
+              placeholder: "1433",
+              type: "number",
+            },
+            {
+              name: "authType",
+              label: "Auth Type",
+              type: "select",
+              options: [
+                { value: "managed", label: "Managed Identity" },
+                { value: "sql", label: "SQL Authentication" },
+              ],
+            },
+            {
+              name: "sslRequired",
+              label: "SSL Required",
+              type: "toggle",
+              toggleLabel: "Require SSL connection",
+            },
+          ];
 
       return (
         <div className="space-y-6">
@@ -1678,69 +1662,69 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-              {
-                name: "host",
-                label: "Hostname / IP",
-                placeholder: "Oracle server hostname or IP",
-              },
-              {
-                name: "port",
-                label: "Port",
-                placeholder: "1521",
-                type: "number",
-              },
-              {
-                name: "tnsAlias",
-                label: "TNS Alias (Optional)",
-                placeholder: "TNS service name",
-              },
-              {
-                name: "authType",
-                label: "Auth Type",
-                type: "select",
-                options: [
-                  { value: "userpass", label: "Username/Password" },
-                  { value: "kerberos", label: "Kerberos" },
-                ],
-              },
-              {
-                name: "username",
-                label: "Username",
-                placeholder: "Oracle username",
-              },
-              {
-                name: "password",
-                label: "Password",
-                placeholder: "Oracle password",
-                type: "password",
-              },
-            ]
+            {
+              name: "host",
+              label: "Hostname / IP",
+              placeholder: "Oracle server hostname or IP",
+            },
+            {
+              name: "port",
+              label: "Port",
+              placeholder: "1521",
+              type: "number",
+            },
+            {
+              name: "tnsAlias",
+              label: "TNS Alias (Optional)",
+              placeholder: "TNS service name",
+            },
+            {
+              name: "authType",
+              label: "Auth Type",
+              type: "select",
+              options: [
+                { value: "userpass", label: "Username/Password" },
+                { value: "kerberos", label: "Kerberos" },
+              ],
+            },
+            {
+              name: "username",
+              label: "Username",
+              placeholder: "Oracle username",
+            },
+            {
+              name: "password",
+              label: "Password",
+              placeholder: "Oracle password",
+              type: "password",
+            },
+          ]
           : [
-              {
-                name: "cloudProvider",
-                label: "Cloud Provider",
-                type: "select",
-                options: [
-                  { value: "oci", label: "Oracle Cloud Infrastructure" },
-                  { value: "aws-rds", label: "AWS RDS for Oracle" },
-                ],
-              },
-              {
-                name: "connectionType",
-                label: "Connection Type",
-                value: "SSL + Wallet",
-                disabled: true,
-              },
-              {
-                name: "authType",
-                label: "Auth Type",
-                type: "select",
-                options: [
-                  { value: "iam", label: "IAM" },
-                  { value: "oauth", label: "OAuth" },
-                ],
-              },
-            ];
+            {
+              name: "cloudProvider",
+              label: "Cloud Provider",
+              type: "select",
+              options: [
+                { value: "oci", label: "Oracle Cloud Infrastructure" },
+                { value: "aws-rds", label: "AWS RDS for Oracle" },
+              ],
+            },
+            {
+              name: "connectionType",
+              label: "Connection Type",
+              value: "SSL + Wallet",
+              disabled: true,
+            },
+            {
+              name: "authType",
+              label: "Auth Type",
+              type: "select",
+              options: [
+                { value: "iam", label: "IAM" },
+                { value: "oauth", label: "OAuth" },
+              ],
+            },
+          ];
 
       return (
         <div className="space-y-6">
@@ -1762,72 +1746,72 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-              {
-                name: "host",
-                label: "Hostname / IP",
-                placeholder: "PostgreSQL server hostname",
-              },
-              {
-                name: "port",
-                label: "Port",
-                placeholder: "5432",
-                type: "number",
-              },
-              {
-                name: "username",
-                label: "Username",
-                placeholder: "PostgreSQL username",
-              },
-              {
-                name: "password",
-                label: "Password",
-                placeholder: "PostgreSQL password",
-                type: "password",
-              },
-              {
-                name: "dbName",
-                label: "Database Name",
-                placeholder: "Database name",
-              },
-              {
-                name: "ssl",
-                label: "SSL Connection",
-                type: "toggle",
-                toggleLabel: "Enable SSL",
-              },
-            ]
+            {
+              name: "host",
+              label: "Hostname / IP",
+              placeholder: "PostgreSQL server hostname",
+            },
+            {
+              name: "port",
+              label: "Port",
+              placeholder: "5432",
+              type: "number",
+            },
+            {
+              name: "username",
+              label: "Username",
+              placeholder: "PostgreSQL username",
+            },
+            {
+              name: "password",
+              label: "Password",
+              placeholder: "PostgreSQL password",
+              type: "password",
+            },
+            {
+              name: "dbName",
+              label: "Database Name",
+              placeholder: "Database name",
+            },
+            {
+              name: "ssl",
+              label: "SSL Connection",
+              type: "toggle",
+              toggleLabel: "Enable SSL",
+            },
+          ]
           : [
-              {
-                name: "provider",
-                label: "Provider",
-                type: "select",
-                options: [
-                  { value: "aws", label: "AWS RDS" },
-                  { value: "azure", label: "Azure Database" },
-                  { value: "gcp", label: "Google Cloud SQL" },
-                ],
-              },
-              {
-                name: "authMethod",
-                label: "Auth Method",
-                type: "select",
-                options: [
-                  { value: "iam", label: "IAM" },
-                  { value: "userpass", label: "Username/Password" },
-                ],
-              },
-              {
-                name: "hostname",
-                label: "Hostname",
-                placeholder: "Cloud database hostname",
-              },
-              {
-                name: "sslRequired",
-                label: "SSL Required",
-                type: "toggle",
-                toggleLabel: "SSL is mandatory",
-              },
-            ];
+            {
+              name: "provider",
+              label: "Provider",
+              type: "select",
+              options: [
+                { value: "aws", label: "AWS RDS" },
+                { value: "azure", label: "Azure Database" },
+                { value: "gcp", label: "Google Cloud SQL" },
+              ],
+            },
+            {
+              name: "authMethod",
+              label: "Auth Method",
+              type: "select",
+              options: [
+                { value: "iam", label: "IAM" },
+                { value: "userpass", label: "Username/Password" },
+              ],
+            },
+            {
+              name: "hostname",
+              label: "Hostname",
+              placeholder: "Cloud database hostname",
+            },
+            {
+              name: "sslRequired",
+              label: "SSL Required",
+              type: "toggle",
+              toggleLabel: "SSL is mandatory",
+            },
+          ];
 
       return (
         <div className="space-y-6">
@@ -1849,68 +1833,68 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-              {
-                name: "host",
-                label: "Host/IP",
-                placeholder: "MongoDB server hostname",
-              },
-              {
-                name: "port",
-                label: "Port",
-                placeholder: "27017",
-                type: "number",
-              },
-              {
-                name: "bindIPs",
-                label: "Bind IPs",
-                placeholder: "Comma-separated IP addresses",
-                type: "textarea",
-              },
-              {
-                name: "authType",
-                label: "Auth Type",
-                type: "select",
-                options: [
-                  { value: "scram", label: "SCRAM" },
-                  { value: "x509", label: "x.509" },
-                ],
-              },
-              {
-                name: "ssl",
-                label: "SSL",
-                type: "toggle",
-                toggleLabel: "Enable SSL",
-              },
-            ]
+            {
+              name: "host",
+              label: "Host/IP",
+              placeholder: "MongoDB server hostname",
+            },
+            {
+              name: "port",
+              label: "Port",
+              placeholder: "27017",
+              type: "number",
+            },
+            {
+              name: "bindIPs",
+              label: "Bind IPs",
+              placeholder: "Comma-separated IP addresses",
+              type: "textarea",
+            },
+            {
+              name: "authType",
+              label: "Auth Type",
+              type: "select",
+              options: [
+                { value: "scram", label: "SCRAM" },
+                { value: "x509", label: "x.509" },
+              ],
+            },
+            {
+              name: "ssl",
+              label: "SSL",
+              type: "toggle",
+              toggleLabel: "Enable SSL",
+            },
+          ]
           : [
-              {
-                name: "provider",
-                label: "Provider",
-                type: "select",
-                options: [
-                  { value: "atlas", label: "MongoDB Atlas" },
-                  { value: "documentdb", label: "Amazon DocumentDB" },
-                ],
-              },
-              {
-                name: "connectionString",
-                label: "Connection String",
-                placeholder: "MongoDB connection string",
-                type: "textarea",
-              },
-              {
-                name: "sslAlwaysOn",
-                label: "SSL Always On",
-                type: "toggle",
-                toggleLabel: "SSL is always enabled",
-              },
-              {
-                name: "vpcPeering",
-                label: "VPC Peering",
-                type: "toggle",
-                toggleLabel: "Enable VPC peering",
-              },
-            ];
+            {
+              name: "provider",
+              label: "Provider",
+              type: "select",
+              options: [
+                { value: "atlas", label: "MongoDB Atlas" },
+                { value: "documentdb", label: "Amazon DocumentDB" },
+              ],
+            },
+            {
+              name: "connectionString",
+              label: "Connection String",
+              placeholder: "MongoDB connection string",
+              type: "textarea",
+            },
+            {
+              name: "sslAlwaysOn",
+              label: "SSL Always On",
+              type: "toggle",
+              toggleLabel: "SSL is always enabled",
+            },
+            {
+              name: "vpcPeering",
+              label: "VPC Peering",
+              type: "toggle",
+              toggleLabel: "Enable VPC peering",
+            },
+          ];
 
       return (
         <div className="space-y-6">
@@ -1929,95 +1913,129 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
 
     // Files Configuration
     if (currentSourceType === "files") {
-      const fields = currentLocation === "on-prem"
-        ? [
-            {
-              name: "filePath",
-              label: "File Path",
-              placeholder: "/path/to/files or \\server\\share (NFS/SMB URI)",
-              description: "Local path or network file share path"
-            },
-            {
-              name: "accessType",
-              label: "Access Type",
-              type: "select",
-              placeholder: "Select access type",
-              options: [
-                { value: "shared", label: "Shared" },
-                { value: "mount", label: "Mount" }
-              ]
-            },
-            {
-              name: "mountPath",
-              label: "Mount Path",
-              placeholder: "/mnt/data (if containerized)",
-              description: "Container mount path if using containerized deployment"
-            },
-            {
-              name: "fileFormat",
-              label: "File Format",
-              type: "select",
-              placeholder: "Select file format",
-              options: [
-                { value: "csv", label: "CSV" },
-                { value: "json", label: "JSON" },
-                { value: "png", label: "PNG" },
-                { value: "jpeg", label: "JPEG" },
-                { value: "pdf", label: "PDF" },
-                { value: "jpg", label: "JPG" }
-              ]
-            }
+      let fields;
+      const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+      if (currentLocation === "on-prem") {
+        fields = [
+          {
+            name: "filePath",
+            label: "File Path",
+            placeholder: "/path/to/files or \\server\\share (NFS/SMB URI)",
+            description: "Local path or network file share path"
+          },
+          {
+            name: "accessType",
+            label: "Access Type",
+            type: "select",
+            placeholder: "Select access type",
+            options: [
+              { value: "shared", label: "Shared" },
+              { value: "mount", label: "Mount" }
+            ]
+          },
+          {
+            name: "mountPath",
+            label: "Mount Path",
+            placeholder: "/mnt/data (if containerized)",
+            description: "Container mount path if using containerized deployment"
+          },
+          {
+            name: "fileFormat",
+            label: "File Format",
+            type: "select",
+            placeholder: "Select file format",
+            options: [
+              { value: "csv", label: "CSV" },
+              { value: "json", label: "JSON" },
+              { value: "png", label: "PNG" },
+              { value: "jpeg", label: "JPEG" },
+              { value: "pdf", label: "PDF" },
+              { value: "jpg", label: "JPG" }
+            ]
+          }
+        ];
+      } else {
+        // Cloud
+        fields = [
+          {
+            name: "cloudProvider",
+            label: "Cloud Provider",
+            type: "select",
+            placeholder: "Select cloud provider",
+            options: [
+              { value: "s3", label: "Amazon S3" },
+              { value: "azure", label: "Azure Blob Storage" },
+              { value: "gcs", label: "Google Cloud Storage" }
+            ]
+          },
+          {
+            name: "containerName",
+            label: "Container Name",
+            placeholder: "my-data-container",
+            description: "Name of your storage container"
+          },
+          {
+            name: "pathPrefix",
+            label: "Path Prefix",
+            placeholder: "data/files/ (optional)",
+            description: "Optional path prefix within the container"
+          },
+        ];
+        if (isAzure) {
+          fields.push({
+            name: "connectionString",
+            label: "Azure Connection String",
+            type: "textarea",
+            placeholder: "Paste your Azure Blob Storage connection string here",
+            description: "Full Azure Blob Storage connection string."
+          });
+        } else {
+          fields.push({
+            name: "authType",
+            label: "Auth Type",
+            type: "select",
+            placeholder: "Select authentication type",
+            options: [
+              { value: "iam", label: "IAM Role" },
+              { value: "sas", label: "SAS Token" },
+              { value: "keyvault", label: "Azure Key Vault" }
+            ]
+          });
+        }
+        fields.push({
+          name: "fileFormat",
+          label: "File Format",
+          type: "select",
+          placeholder: "Select file format",
+          options: [
+            { value: "csv", label: "CSV" },
+            { value: "json", label: "JSON" },
+            { value: "png", label: "PNG" },
+            { value: "jpeg", label: "JPEG" },
+            { value: "pdf", label: "PDF" },
+            { value: "jpg", label: "JPG" }
           ]
-        : [
-            {
-              name: "cloudProvider",
-              label: "Cloud Provider",
-              type: "select",
-              placeholder: "Select cloud provider",
-              options: [
-                { value: "s3", label: "Amazon S3" },
-                { value: "azure", label: "Azure Blob Storage" },
-                { value: "gcs", label: "Google Cloud Storage" }
-              ]
-            },
-            {
-              name: "containerName",
-              label: "Container Name",
-              placeholder: "my-data-container",
-              description: "Name of your storage container"
-            },
-            {
-              name: "pathPrefix",
-              label: "Path Prefix",
-              placeholder: "data/files/ (optional)",
-              description: "Optional path prefix within the container"
-            },
-            {
-              name: "authType",
-              label: "Auth Type",
-              type: "select",
-              placeholder: "Select authentication type",
-              options: [
-                { value: "iam", label: "IAM Role" },
-                { value: "sas", label: "SAS Token" },
-                { value: "keyvault", label: "Azure Key Vault" }
-              ]
-            },
-            {
-              name: "fileFormat",
-              label: "File Format",
-              type: "select",
-              placeholder: "Select file format",
-              options: [
-                { value: "csv", label: "CSV" },
-                { value: "json", label: "JSON" },
-                { value: "png", label: "PNG" },
-                { value: "jpeg", label: "JPEG" },
-                { value: "pdf", label: "PDF" },
-                { value: "jpg", label: "JPG" }
-              ]
-            }
-          ];
+        });
+      }
+
+      // Render the Test Connection button for Azure Blob Storage
+      const renderTestConnectionButton = () => {
+        if (isAzure && currentSourceType === "files") {
+          return (
+            <div className="flex justify-end mt-2">
+              <button
+                type="button"
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                onClick={handleTestConnection}
+                disabled={testAzureBlobConnection.isLoading}
+              >
+                {testAzureBlobConnection.isLoading ? "Testing..." : "Test Connection"}
+              </button>
+            </div>
+          );
+        }
+        return null;
+      };
 
       return (
         <div className="space-y-6">
@@ -2028,94 +2046,140 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
             </p>
           </div>
           {renderCommonFields(fields)}
+          {renderTestConnectionButton()}
         </div>
       );
+  // Move handleTestConnection to the bottom of the component so it can be referenced anywhere
+  function handleTestConnection() {
+    const currentSourceType = form.getValues("sourceType");
+    const currentLocation = form.getValues("location");
+    const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+    if (isAzure && currentSourceType === "files") {
+      const connectionString = form.getValues("connectionString");
+      const containerName = form.getValues("containerName");
+      if (!connectionString || !containerName) {
+        toast({
+          title: "Missing Required Fields",
+          description: "Please provide both Azure Connection String and Container Name.",
+          variant: "destructive",
+        });
+        return;
+      }
+      testAzureBlobConnection.mutate(
+        { connectionString, containerName },
+        {
+          onSuccess: (data) => {
+            if (data.success) {
+              toast({
+                title: "Connection Successful",
+                description: data.message || "Connection to Azure Blob Storage successful!",
+                variant: "success",
+              });
+            } else {
+              toast({
+                title: "Connection Failed",
+                description: data.message || "Could not connect to Azure Blob Storage.",
+                variant: "destructive",
+              });
+            }
+          },
+          onError: (error) => {
+            toast({
+              title: "Connection Failed",
+              description: error?.response?.data?.message || error.message || "Could not connect to Azure Blob Storage.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    }
+  }
     }
 
     // REST API Configuration
     if (currentSourceType === "rest") {
-      const fields = currentLocation === "on-prem" 
+      const fields = currentLocation === "on-prem"
         ? [
-            {
-              name: "apiUrl",
-              label: "API URL",
-              placeholder: "https://api.company.com/v1",
-              description: "The base URL for your REST API"
-            },
-            {
-              name: "authMethod",
-              label: "Auth Method",
-              type: "select",
-              placeholder: "Select authentication method",
-              options: [
-                { value: "apikey", label: "API Key" },
-                { value: "basic", label: "Basic Auth" },
-                { value: "oauth2", label: "OAuth2" }
-              ]
-            },
-            {
-              name: "vpnRequired",
-              label: "VPN Required",
-              type: "toggle",
-              toggleLabel: "VPN connection required"
-            },
-            {
-              name: "corsNotes",
-              label: "CORS/Internal Access Notes",
-              type: "textarea",
-              placeholder: "Notes about CORS configuration or internal access requirements",
-              description: "Optional notes about network access requirements"
-            }
-          ]
+          {
+            name: "apiUrl",
+            label: "API URL",
+            placeholder: "https://api.company.com/v1",
+            description: "The base URL for your REST API"
+          },
+          {
+            name: "authMethod",
+            label: "Auth Method",
+            type: "select",
+            placeholder: "Select authentication method",
+            options: [
+              { value: "apikey", label: "API Key" },
+              { value: "basic", label: "Basic Auth" },
+              { value: "oauth2", label: "OAuth2" }
+            ]
+          },
+          {
+            name: "vpnRequired",
+            label: "VPN Required",
+            type: "toggle",
+            toggleLabel: "VPN connection required"
+          },
+          {
+            name: "corsNotes",
+            label: "CORS/Internal Access Notes",
+            type: "textarea",
+            placeholder: "Notes about CORS configuration or internal access requirements",
+            description: "Optional notes about network access requirements"
+          }
+        ]
         : [
-            {
-              name: "apiUrl",
-              label: "API URL",
-              placeholder: "https://api.service.com/v1",
-              description: "The base URL for your cloud REST API"
-            },
-            {
-              name: "authMethod",
-              label: "Auth Method",
-              type: "select",
-              placeholder: "Select authentication method",
-              options: [
-                { value: "oauth2", label: "OAuth2" },
-                { value: "jwt", label: "JWT" },
-                { value: "apikey", label: "API Key" }
-              ]
-            },
-            {
-              name: "rateLimiting",
-              label: "Rate Limiting",
-              placeholder: "Requests per minute (optional)",
-              type: "number",
-              description: "Optional rate limiting configuration"
-            },
-            {
-              name: "corsEnabled",
-              label: "CORS Always Enforced",
-              type: "toggle",
-              toggleLabel: "CORS is always enforced",
-              defaultValue: true,
-              disabled: true
-            },
-            {
-              name: "httpsOnly",
-              label: "HTTPS Mandatory",
-              type: "toggle",
-              toggleLabel: "HTTPS is mandatory",
-              defaultValue: true,
-              disabled: true
-            }
-          ];
+          {
+            name: "apiUrl",
+            label: "API URL",
+            placeholder: "https://api.service.com/v1",
+            description: "The base URL for your cloud REST API"
+          },
+          {
+            name: "authMethod",
+            label: "Auth Method",
+            type: "select",
+            placeholder: "Select authentication method",
+            options: [
+              { value: "oauth2", label: "OAuth2" },
+              { value: "jwt", label: "JWT" },
+              { value: "apikey", label: "API Key" }
+            ]
+          },
+          {
+            name: "rateLimiting",
+            label: "Rate Limiting",
+            placeholder: "Requests per minute (optional)",
+            type: "number",
+            description: "Optional rate limiting configuration"
+          },
+          {
+            name: "corsEnabled",
+            label: "CORS Always Enforced",
+            type: "toggle",
+            toggleLabel: "CORS is always enforced",
+            defaultValue: true,
+            disabled: true
+          },
+          {
+            name: "httpsOnly",
+            label: "HTTPS Mandatory",
+            type: "toggle",
+            toggleLabel: "HTTPS is mandatory",
+            defaultValue: true,
+            disabled: true
+          }
+        ];
 
       return (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
             <h3 className="font-medium text-gray-900 mb-2">REST API Configuration</h3>
             <p className="text-sm text-gray-600">
-              {currentLocation === "on-prem" 
+              {currentLocation === "on-prem"
                 ? "Configure connection to your on-premises REST API with custom network settings"
                 : "Configure connection to your cloud REST API with standard security protocols"}
             </p>
@@ -2200,102 +2264,102 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
     if (currentSourceType === "datawarehouse") {
       const fields = currentLocation === "on-prem"
         ? [
-            {
-              name: "warehouseType",
-              label: "Data Warehouse Type",
-              type: "select",
-              placeholder: "Select warehouse type",
-              options: [
-                { value: "teradata", label: "Teradata" },
-                { value: "netezza", label: "Netezza" },
-                { value: "vertica", label: "Vertica" }
-              ]
-            },
-            {
-              name: "host",
-              label: "Host",
-              placeholder: "warehouse.company.com",
-              description: "Data warehouse server hostname or IP"
-            },
-            {
-              name: "port",
-              label: "Port",
-              type: "number",
-              placeholder: "Default port for selected warehouse type"
-            },
-            {
-              name: "connectionString",
-              label: "JDBC/ODBC Connection String",
-              type: "textarea",
-              placeholder: "Full connection string with driver details",
-              description: "Complete connection string including driver information"
-            },
-            {
-              name: "authMethod",
-              label: "Auth Method",
-              type: "select",
-              placeholder: "Select authentication method",
-              options: [
-                { value: "userpass", label: "Username/Password" },
-                { value: "kerberos", label: "Kerberos" },
-                { value: "ldap", label: "LDAP" }
-              ]
-            }
-          ]
+          {
+            name: "warehouseType",
+            label: "Data Warehouse Type",
+            type: "select",
+            placeholder: "Select warehouse type",
+            options: [
+              { value: "teradata", label: "Teradata" },
+              { value: "netezza", label: "Netezza" },
+              { value: "vertica", label: "Vertica" }
+            ]
+          },
+          {
+            name: "host",
+            label: "Host",
+            placeholder: "warehouse.company.com",
+            description: "Data warehouse server hostname or IP"
+          },
+          {
+            name: "port",
+            label: "Port",
+            type: "number",
+            placeholder: "Default port for selected warehouse type"
+          },
+          {
+            name: "connectionString",
+            label: "JDBC/ODBC Connection String",
+            type: "textarea",
+            placeholder: "Full connection string with driver details",
+            description: "Complete connection string including driver information"
+          },
+          {
+            name: "authMethod",
+            label: "Auth Method",
+            type: "select",
+            placeholder: "Select authentication method",
+            options: [
+              { value: "userpass", label: "Username/Password" },
+              { value: "kerberos", label: "Kerberos" },
+              { value: "ldap", label: "LDAP" }
+            ]
+          }
+        ]
         : [
-            {
-              name: "provider",
-              label: "Cloud Provider",
-              type: "select",
-              placeholder: "Select cloud data warehouse",
-              options: [
-                { value: "snowflake", label: "Snowflake" },
-                { value: "redshift", label: "Amazon Redshift" },
-                { value: "bigquery", label: "Google BigQuery" },
-                { value: "synapse", label: "Azure Synapse" }
-              ]
-            },
-            {
-              name: "authMethod",
-              label: "Auth Method",
-              type: "select",
-              placeholder: "Select authentication method",
-              options: [
-                { value: "iam", label: "IAM" },
-                { value: "keypair", label: "Key Pair" },
-                { value: "oauth", label: "OAuth" }
-              ]
-            },
-            {
-              name: "accountId",
-              label: "Account ID / Project ID",
-              placeholder: "Your account or project identifier",
-              description: "Account ID for Snowflake, Project ID for BigQuery, etc."
-            },
-            {
-              name: "database",
-              label: "Database Name",
-              placeholder: "Database name"
-            },
-            {
-              name: "schema",
-              label: "Schema Name", 
-              placeholder: "Schema name"
-            },
-            {
-              name: "sslRequired",
-              label: "SSL Required",
-              type: "toggle",
-              toggleLabel: "SSL connection required",
-              defaultValue: true
-            },
-            {
-              name: "vpcPeering",
-              label: "VPC Peering",
-              type: "toggle",
-              toggleLabel: "Enable VPC peering"
-            }
-          ];
+          {
+            name: "provider",
+            label: "Cloud Provider",
+            type: "select",
+            placeholder: "Select cloud data warehouse",
+            options: [
+              { value: "snowflake", label: "Snowflake" },
+              { value: "redshift", label: "Amazon Redshift" },
+              { value: "bigquery", label: "Google BigQuery" },
+              { value: "synapse", label: "Azure Synapse" }
+            ]
+          },
+          {
+            name: "authMethod",
+            label: "Auth Method",
+            type: "select",
+            placeholder: "Select authentication method",
+            options: [
+              { value: "iam", label: "IAM" },
+              { value: "keypair", label: "Key Pair" },
+              { value: "oauth", label: "OAuth" }
+            ]
+          },
+          {
+            name: "accountId",
+            label: "Account ID / Project ID",
+            placeholder: "Your account or project identifier",
+            description: "Account ID for Snowflake, Project ID for BigQuery, etc."
+          },
+          {
+            name: "database",
+            label: "Database Name",
+            placeholder: "Database name"
+          },
+          {
+            name: "schema",
+            label: "Schema Name",
+            placeholder: "Schema name"
+          },
+          {
+            name: "sslRequired",
+            label: "SSL Required",
+            type: "toggle",
+            toggleLabel: "SSL connection required",
+            defaultValue: true
+          },
+          {
+            name: "vpcPeering",
+            label: "VPC Peering",
+            type: "toggle",
+            toggleLabel: "Enable VPC peering"
+          }
+        ];
 
       return (
         <div className="space-y-6">
@@ -2530,19 +2594,17 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
           {[1, 2, 3, 4].map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  stepNumber <= step
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${stepNumber <= step
                     ? "bg-[#2196F3] text-white"
                     : "bg-gray-200 text-gray-500"
-                }`}
+                  }`}
               >
                 {stepNumber}
               </div>
               {stepNumber < 4 && (
                 <ChevronRight
-                  className={`h-4 w-4 mx-2 ${
-                    stepNumber < step ? "text-[#2196F3]" : "text-gray-300"
-                  }`}
+                  className={`h-4 w-4 mx-2 ${stepNumber < step ? "text-[#2196F3]" : "text-gray-300"
+                    }`}
                 />
               )}
             </div>
@@ -2580,17 +2642,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
           )}
         </div>
 
-        <div className="flex space-x-3">
-          {step === 2 && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleTestConnection}
-              className="border-blue-500 text-blue-600 hover:bg-blue-50"
-            >
-              Test Connection
-            </Button>
-          )}
+        <div className="flex space-x-3">         
 
           {step < 4 ? (
             <Button
