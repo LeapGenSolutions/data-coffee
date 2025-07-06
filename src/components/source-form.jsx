@@ -38,6 +38,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
+import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 
 // Define basic schema and schemas for each source type and location
 const baseSchema = z.object({
@@ -135,7 +136,7 @@ const getValidationSchema = (sourceType, location) => {
     return schema.extend({
       containerName: z.string().min(1, "Container name is required"),
       fileFormat: z.string().min(1, "File format is required"),
-      authType: z.string().min(1, "Auth type is required"),
+      // authType: z.string().min(1, "Auth type is required"),
     });
   }
 
@@ -198,6 +199,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
   const testAzureBlobConnection = useTestAzureBlobConnection();
+  const listAzureBlobFiles = useListAzureBlobFiles();
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -238,6 +240,9 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
   const [selectedColumns, setSelectedColumns] = useState({});
   const [customQuery, setCustomQuery] = useState("");
   const [tableSearchQuery, setTableSearchQuery] = useState("");
+  // For Azure Blob file listing
+  const [azureFiles, setAzureFiles] = useState([]);
+  const [isAzureFilesLoaded, setIsAzureFilesLoaded] = useState(false);
 
   // Mock data for demonstration
   const availableTables = [
@@ -644,6 +649,75 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
       }
     };
 
+    const handleListFilesButtonClick = async () => {
+      const connectionString = form.getValues("connectionString");
+      const containerName = form.getValues("containerName");
+      const blobPath = form.getValues("pathPrefix");
+      const fileType = form.getValues("fileFormat");
+      if (!connectionString || !containerName || !fileType) {
+        toast({
+          title: "Missing Required Fields",
+          description: "Please provide connection string, container name, and file format.",
+          variant: "destructive",
+        });
+        return;
+      }
+      listAzureBlobFiles.mutate(
+        { connectionString, containerName, blobPath, fileType },
+        {
+          onSuccess: (data) => {
+            if (data.success && Array.isArray(data.files)) {
+              setAzureFiles(data.files);
+              setIsAzureFilesLoaded(true);
+              setSelectedTables(data.files);
+            } else {
+              setAzureFiles([]);
+              setIsAzureFilesLoaded(false);
+              toast({
+                title: "No files found",
+                description: "No files of the selected type were found in the container.",
+                variant: "destructive",
+              });
+            }
+          },
+          onError: (error) => {
+            setAzureFiles([]);
+            setIsAzureFilesLoaded(false);
+            toast({
+              title: "Error listing files",
+              description: error?.response?.data?.message || error.message || "Could not list files from Azure Blob Storage.",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    }
+
+    const getFilesListSection = () => {
+      return <div className="mt-4">
+        <p className="text-sm font-medium text-gray-900 mb-2">Select Files:</p>
+        <div className="max-h-64 overflow-y-auto border rounded p-2 bg-gray-50">
+          {azureFiles.map((file) => (
+            <label key={file} className="flex items-center space-x-2 mb-1">
+              <input
+                type="checkbox"
+                checked={selectedTables.includes(file)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedTables([...selectedTables, file]);
+                  } else {
+                    setSelectedTables(selectedTables.filter((f) => f !== file));
+                  }
+                }}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-xs text-gray-700">{file}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    }
+
     // Get query-related helpers
     const getQueryDescription = (sourceType) => {
       switch (sourceType) {
@@ -887,82 +961,95 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
             {selectionMode === "specific" && currentSourceType === "files" && (
               <div className="space-y-4">
                 <div className="bg-white p-4 rounded-md border border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Select Specific Sheets/Columns</h4>
-
-                  {/* File Upload */}
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                    <div className="text-center">
-                      <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
-                      <label htmlFor="specific-file-upload" className="cursor-pointer">
-                        <span className="text-sm font-medium text-gray-900">Upload Excel or CSV file</span>
-                        <input
-                          id="specific-file-upload"
-                          type="file"
-                          className="sr-only"
-                          accept=".xlsx,.xls,.csv"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              // Simulate sheet/column detection
-                              setSelectedTables(["Sheet1", "Sheet2", "Data"]);
-                              setExpandedTables(["Sheet1"]);
-                            }
-                          }}
-                        />
-                      </label>
-                      <p className="text-xs text-gray-500 mt-1">Excel or CSV files only</p>
-                    </div>
-                  </div>
-
-                  {/* Sheet/Column Selection (appears after file upload) */}
-                  {selectedTables.length > 0 && (
-                    <div className="mt-4 space-y-3">
-                      <p className="text-sm font-medium text-gray-900">Select Sheets and Columns:</p>
-
-                      {selectedTables.map((sheet, index) => (
-                        <div key={sheet} className="border border-gray-200 rounded-lg p-3 bg-white">
-                          <div className="flex items-center justify-between mb-2">
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                defaultChecked
-                                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                              />
-                              <span className="text-sm font-medium text-gray-900">{sheet}</span>
-                            </label>
-                            <button
-                              onClick={() => {
-                                setExpandedTables(prev =>
-                                  prev.includes(sheet)
-                                    ? prev.filter(t => t !== sheet)
-                                    : [...prev, sheet]
-                                );
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Select Specific Files</h4>
+                  {/* Azure Blob Storage: List files for selection */}
+                  {location === "cloud" && form.getValues("cloudProvider") === "azure" ? (
+                    <>
+                      <button
+                        type="button"
+                        className="mb-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        disabled={listAzureBlobFiles.isLoading}
+                        onClick={handleListFilesButtonClick}
+                      >
+                        {listAzureBlobFiles.isLoading ? "Loading Files..." : "List Files from Azure Blob Storage"}
+                      </button>
+                      {isAzureFilesLoaded && azureFiles.length > 0 && getFilesListSection()}
+                    </>
+                  ) : (
+                    // Fallback: original file upload logic for on-prem or non-Azure
+                    <>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+                        <div className="text-center">
+                          <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <label htmlFor="specific-file-upload" className="cursor-pointer">
+                            <span className="text-sm font-medium text-gray-900">Upload Excel or CSV file</span>
+                            <input
+                              id="specific-file-upload"
+                              type="file"
+                              className="sr-only"
+                              accept=".xlsx,.xls,.csv"
+                              onChange={(e) => {
+                                const file = e.target.files[0];
+                                if (file) {
+                                  // Simulate sheet/column detection
+                                  setSelectedTables(["Sheet1", "Sheet2", "Data"]);
+                                  setExpandedTables(["Sheet1"]);
+                                }
                               }}
-                              className="text-blue-600 text-xs hover:text-blue-800"
-                            >
-                              {expandedTables.includes(sheet) ? "Hide Columns" : "Show Columns"}
-                            </button>
-                          </div>
-
-                          {expandedTables.includes(sheet) && (
-                            <div className="ml-6 grid grid-cols-2 gap-2 mt-2">
-                              {(tableColumns[sheet] || ["Column A", "Column B", "Column C", "Column D"]).map(column => (
-                                <label key={column} className="flex items-center space-x-2">
+                            />
+                          </label>
+                          <p className="text-xs text-gray-500 mt-1">Excel or CSV files only</p>
+                        </div>
+                      </div>
+                      {/* Sheet/Column Selection (appears after file upload) */}
+                      {selectedTables.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          <p className="text-sm font-medium text-gray-900">Select Sheets and Columns:</p>
+                          {selectedTables.map((sheet, index) => (
+                            <div key={sheet} className="border border-gray-200 rounded-lg p-3 bg-white">
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="flex items-center space-x-2">
                                   <input
                                     type="checkbox"
                                     defaultChecked
-                                    className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                   />
-                                  <span className="text-xs text-gray-700">{column}</span>
+                                  <span className="text-sm font-medium text-gray-900">{sheet}</span>
                                 </label>
-                              ))}
+                                <button
+                                  onClick={() => {
+                                    setExpandedTables(prev =>
+                                      prev.includes(sheet)
+                                        ? prev.filter(t => t !== sheet)
+                                        : [...prev, sheet]
+                                    );
+                                  }}
+                                  className="text-blue-600 text-xs hover:text-blue-800"
+                                >
+                                  {expandedTables.includes(sheet) ? "Hide Columns" : "Show Columns"}
+                                </button>
+                              </div>
+                              {expandedTables.includes(sheet) && (
+                                <div className="ml-6 grid grid-cols-2 gap-2 mt-2">
+                                  {(tableColumns[sheet] || ["Column A", "Column B", "Column C", "Column D"]).map(column => (
+                                    <label key={column} className="flex items-center space-x-2">
+                                      <input
+                                        type="checkbox"
+                                        defaultChecked
+                                        className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                      />
+                                      <span className="text-xs text-gray-700">{column}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          ))}
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -2049,51 +2136,51 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
           {renderTestConnectionButton()}
         </div>
       );
-  // Move handleTestConnection to the bottom of the component so it can be referenced anywhere
-  function handleTestConnection() {
-    const currentSourceType = form.getValues("sourceType");
-    const currentLocation = form.getValues("location");
-    const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
-    if (isAzure && currentSourceType === "files") {
-      const connectionString = form.getValues("connectionString");
-      const containerName = form.getValues("containerName");
-      if (!connectionString || !containerName) {
-        toast({
-          title: "Missing Required Fields",
-          description: "Please provide both Azure Connection String and Container Name.",
-          variant: "destructive",
-        });
-        return;
-      }
-      testAzureBlobConnection.mutate(
-        { connectionString, containerName },
-        {
-          onSuccess: (data) => {
-            if (data.success) {
-              toast({
-                title: "Connection Successful",
-                description: data.message || "Connection to Azure Blob Storage successful!",
-                variant: "success",
-              });
-            } else {
-              toast({
-                title: "Connection Failed",
-                description: data.message || "Could not connect to Azure Blob Storage.",
-                variant: "destructive",
-              });
-            }
-          },
-          onError: (error) => {
+      // Move handleTestConnection to the bottom of the component so it can be referenced anywhere
+      function handleTestConnection() {
+        const currentSourceType = form.getValues("sourceType");
+        const currentLocation = form.getValues("location");
+        const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+        if (isAzure && currentSourceType === "files") {
+          const connectionString = form.getValues("connectionString");
+          const containerName = form.getValues("containerName");
+          if (!connectionString || !containerName) {
             toast({
-              title: "Connection Failed",
-              description: error?.response?.data?.message || error.message || "Could not connect to Azure Blob Storage.",
+              title: "Missing Required Fields",
+              description: "Please provide both Azure Connection String and Container Name.",
               variant: "destructive",
             });
-          },
+            return;
+          }
+          testAzureBlobConnection.mutate(
+            { connectionString, containerName },
+            {
+              onSuccess: (data) => {
+                if (data.success) {
+                  toast({
+                    title: "Connection Successful",
+                    description: data.message || "Connection to Azure Blob Storage successful!",
+                    variant: "success",
+                  });
+                } else {
+                  toast({
+                    title: "Connection Failed",
+                    description: data.message || "Could not connect to Azure Blob Storage.",
+                    variant: "destructive",
+                  });
+                }
+              },
+              onError: (error) => {
+                toast({
+                  title: "Connection Failed",
+                  description: error?.response?.data?.message || error.message || "Could not connect to Azure Blob Storage.",
+                  variant: "destructive",
+                });
+              },
+            }
+          );
         }
-      );
-    }
-  }
+      }
     }
 
     // REST API Configuration
@@ -2595,8 +2682,8 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
             <div key={stepNumber} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${stepNumber <= step
-                    ? "bg-[#2196F3] text-white"
-                    : "bg-gray-200 text-gray-500"
+                  ? "bg-[#2196F3] text-white"
+                  : "bg-gray-200 text-gray-500"
                   }`}
               >
                 {stepNumber}
@@ -2642,7 +2729,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
           )}
         </div>
 
-        <div className="flex space-x-3">         
+        <div className="flex space-x-3">
 
           {step < 4 ? (
             <Button
