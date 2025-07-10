@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -25,23 +24,19 @@ import {
   TrendingUp,
 } from "lucide-react";
 import DashboardLayout from "../layouts/dashboard-layout";
-import { useAuth } from "../contexts/AuthContext.jsx";
+import { useSelector } from "react-redux";
 
 export default function Home() {
-  const { user, isLoading: authLoading } = useAuth();
-
   const { data: dashboardStats, isLoading: statsLoading } = useQuery({
     queryKey: ["/api/dashboard/stats"],
-    enabled: !!user,
+    enabled: true,
   });
 
   const [activeTab, setActiveTab] = useState("Today");
-  const [isExpanded, setIsExpanded] = useState(false);
   const [showExtras, setShowExtras] = useState(false);
   const [showSources, setShowSources] = useState(false);
   
-
-  const toggleChart = () => setIsExpanded(!isExpanded);
+  const user = useSelector((state) => state.me.me);
 
   const chartData = [
     { month: "Jan", blue: 4700, green: 2900 },
@@ -58,18 +53,6 @@ export default function Home() {
     { month: "Dec", blue: 10000, green: 7500 },
   ];
 
-  const renderLegend = () => (
-    <div className="flex gap-6 mt-4 justify-center">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-3 border-4 border-[#8B1E3F] bg-white"></div>
-        <span className="text-sm text-[#6f4536]">Database Queries</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-3 border-4 border-[#A0522D] bg-white"></div>
-        <span className="text-sm text-[#6f4536]">API Requests</span>
-      </div>
-    </div>
-  );
   const scheduledTasks = {
     Today: [
       { title: "System update", time: "Scheduled for 3:00 PM", status: "Pending" },
@@ -105,7 +88,7 @@ export default function Home() {
     }
   };
 
-  if (authLoading || statsLoading) {
+  if (statsLoading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
@@ -124,7 +107,7 @@ export default function Home() {
     activeSources: 28,
     recentActivity: [],
   };
-  const greeting = user ? `Welcome, ${user.username}!` : "Welcome!";
+  const greeting = user ? `Welcome, ${user.name}!` : "Welcome!";
 
   return (
     <DashboardLayout>

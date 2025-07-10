@@ -4,7 +4,7 @@ import { REDIRECT_URI } from "./constants";
 
 export const msalConfig = {
     auth: {
-        clientId: "529bcde4-d3c1-4896-9277-b7d72ec4f57b",
+        clientId: "1c894353-f939-4502-8067-befd7238c350",
         authority: "https://login.microsoftonline.com/b3e3a3db-e3db-4f76-9a7c-5bca46062c8c",
         redirectUri: REDIRECT_URI
     },
