@@ -10,7 +10,8 @@ export default function DashboardLayout({ children }) {
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   const user = useSelector((state) => state.me.me);
-
+  console.log(user);
+  
   const notifRef = useRef(null);
   const settingsRef = useRef(null);
   const accountRef = useRef(null);

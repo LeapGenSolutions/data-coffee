@@ -14,14 +14,19 @@ import { loginRequest } from "./authConfig.js";
 import { store } from "./redux/store.js";
 import setMyDetails from "./redux/me-actions.js";
 
+import { useSelector } from "react-redux";
+import NotAuthorized from "./components/ui/not-authorized.jsx";
+
 function Router() {
+  const user = useSelector((state) => state.me.me);
+  const hasBaristaRole = user && Array.isArray(user.roles) && user.roles.includes("barista");
 
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Home} />
-      <Route path="/admin" component={AdminPanel} />
-      <Route path="/admin-panel" component={AdminPanel} />
+      <Route path="/admin" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
+      <Route path="/admin-panel" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/user" component={UserManagementPage} />
       <Route path="/control-panel" component={ControlPanel} />
