@@ -40,6 +40,7 @@ import {
 import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { useSaveSource } from "../hooks/useSaveSource";
+import { useUserWorkspaces } from "../hooks/useUserWorkspaces";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
 
@@ -202,8 +203,17 @@ export function SourceForm({ onCancel, onSourceSaved }) {
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const testAzureBlobConnection = useTestAzureBlobConnection();
   const listAzureBlobFiles = useListAzureBlobFiles();
+
+  // Workspace dropdown state
+  const user = useSelector((state) => state.me.me);
+  const {
+    data: workspacesData,
+    isLoading: isWorkspacesLoading,
+    error: workspacesError
+  } = useUserWorkspaces(user?.email);
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -220,6 +230,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       location: "on-prem",
       customPrompt: "",
       dataSelectionMode: "",
+      workspace: ""
     },
   });
 
@@ -365,7 +376,6 @@ export function SourceForm({ onCancel, onSourceSaved }) {
   };
 
   const saveSourceMutation = useSaveSource();
-  const user = useSelector((state) => state.me.me);
 
   function handleSaveSource() {
     const currentData = form.getValues();
@@ -384,7 +394,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       configuration: currentData,
       status: "Active",
       lastSync: new Date().toISOString(),
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      workspace: currentData.workspace || selectedWorkspace || undefined
     };
 
     if (!user || !user.email) {
@@ -395,7 +406,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       });
       return;
     }
-    
+
 
     saveSourceMutation.mutate(
       { email: user.email, newSource },
@@ -608,6 +619,35 @@ export function SourceForm({ onCancel, onSourceSaved }) {
         ];
     }
   };
+
+  // Workspace dropdown UI
+  const renderWorkspaceDropdown = () => (
+    <div className="mb-6">
+      <label htmlFor="workspace-select" className="block text-sm font-medium text-gray-700 mb-1">
+        Workspace
+      </label>
+      <select
+        id="workspace-select"
+        className="block w-full border border-gray-300 rounded-md p-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={form.watch("workspace")}
+        onChange={e => {
+          setSelectedWorkspace(e.target.value);
+          form.setValue("workspace", e.target.value);
+        }}
+        disabled={isWorkspacesLoading || !!workspacesError}
+      >
+        <option value="">{isWorkspacesLoading ? "Loading..." : "Select a workspace"}</option>
+        {workspacesData && workspacesData.map(ws => (
+          <option key={ws.id || ws.workspaceName} value={ws.workspaceName}>
+            {ws.workspaceName}
+          </option>
+        ))}
+      </select>
+      {workspacesError && (
+        <p className="text-xs text-red-600 mt-1">Failed to load workspaces</p>
+      )}
+    </div>
+  );
 
   // Render data selection step
   const renderDataSelectionStep = () => {
@@ -2507,6 +2547,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 name="sourceName"
                 render={({ field }) => (
                   <FormItem>
+                    {renderWorkspaceDropdown()}
                     <FormLabel className="text-sm font-medium text-gray-700">
                       Source Name
                     </FormLabel>
