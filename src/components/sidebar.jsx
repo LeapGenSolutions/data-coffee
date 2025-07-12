@@ -1,14 +1,8 @@
-import { Link, useLocation } from "wouter";
+import { Link, useLocation } from "react-router-dom";
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import Logo from "../components/alien-logo";
-import { 
-  Home, 
-  Settings, 
-  Users, 
-  LayoutGrid,
-  LogOut,
-  X} from "lucide-react";
+import { Home, Settings, Users, LayoutGrid, LogOut, X } from "lucide-react";
 
 import { useSelector } from "react-redux";
 
@@ -19,18 +13,17 @@ const navigationBase = [
   { name: "Control Panel", href: "/control-panel", icon: LayoutGrid },
 ];
 
-
 export function Sidebar({ isMobileOpen = false, onMobileClose }) {
-  const [location] = useLocation();
+  const { pathname } = useLocation();
   const user = useSelector((state) => state.me.me);
 
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    window.location.href = '/';
+    localStorage.removeItem("isAuthenticated");
+    window.location.href = "/";
   };
 
   // Filter navigation based on user role for "Admin Panel"
-  const navigation = navigationBase.filter(item => {
+  const navigation = navigationBase.filter((item) => {
     if (!item.role) return true;
     if (!user || !user.roles) return false;
     return user.roles.includes(item.role);
@@ -40,25 +33,31 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
     <>
       {/* Mobile overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
           onClick={onMobileClose}
         />
       )}
-      
+
       {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-white via-gray-50 to-gray-100 border-r border-gray-200 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
-        isMobileOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <div
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-white via-gray-50 to-gray-100 border-r border-gray-200 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white shadow-sm">
             <div className="flex items-center gap-3">
               <Logo size="small" />
               <div className="flex flex-col">
-                <span className="font-bold text-gray-900 text-lg">Data Coffee</span>
-                <span className="text-xs text-gray-600 font-medium">Optimize Data Compliance</span>
+                <span className="font-bold text-gray-900 text-lg">
+                  Data Coffee
+                </span>
+                <span className="text-xs text-gray-600 font-medium">
+                  Optimize Data Compliance
+                </span>
               </div>
             </div>
             <Button
@@ -74,17 +73,17 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-2 bg-gradient-to-b from-transparent to-gray-50/30">
             {navigation.map((item) => {
-              const isActive = location === item.href;
+              const isActive = pathname.startsWith(item.href);
               const IconComponent = item.icon;
-              
+
               return (
-                <Link key={item.name} href={item.href}>
+                <Link key={item.name} to={item.href}>
                   <Button
                     variant="ghost"
                     className={cn(
                       "w-full justify-start gap-2 h-10 transition-all duration-200",
-                      isActive 
-                        ? "bg-gradient-to-r from-[#2196F3] to-[#1976D2] text-white shadow-md transform scale-105" 
+                      isActive
+                        ? "bg-gradient-to-r from-[#2196F3] to-[#1976D2] text-white shadow-md transform scale-105"
                         : "text-gray-700 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 hover:text-[#2196F3] hover:shadow-sm"
                     )}
                     onClick={onMobileClose}
