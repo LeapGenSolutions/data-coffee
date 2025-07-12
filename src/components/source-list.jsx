@@ -1,13 +1,14 @@
 import React, { useState, useMemo } from "react";
-import { 
-  Search, 
-  Plus, 
-  ArrowUpDown, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
+import { useNavigate } from "react-router-dom";
+import {
+  Search,
+  Plus,
+  ArrowUpDown,
+  MoreHorizontal,
+  Eye,
+  Edit,
   Trash2,
-  Database
+  Database,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -37,7 +38,13 @@ import {
 } from "../components/ui/pagination";
 import { useToast } from "../hooks/use-toast";
 
-export default function SourceList({ sources = [], onAddSource, onEditSource, onDeleteSource }) {
+export default function SourceList({
+  sources = [],
+  onAddSource,
+  onEditSource,
+  onDeleteSource,
+}) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -48,10 +55,11 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
 
   // Filter sources based on search term
   const filteredSources = useMemo(() => {
-    return sources.filter(source =>
-      source.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      source.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      source.status.toLowerCase().includes(searchTerm.toLowerCase())
+    return sources.filter(
+      (source) =>
+        source.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        source.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        source.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [sources, searchTerm]);
 
@@ -60,7 +68,7 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
     return [...filteredSources].sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
-      
+
       if (sortDirection === "asc") {
         return aValue.localeCompare(bValue);
       } else {
@@ -72,7 +80,10 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
   // Pagination
   const totalPages = Math.ceil(sortedSources.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedSources = sortedSources.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedSources = sortedSources.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -87,16 +98,20 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
     if (checked) {
       setSelectedSources([...selectedSources, sourceId]);
     } else {
-      setSelectedSources(selectedSources.filter(id => id !== sourceId));
+      setSelectedSources(selectedSources.filter((id) => id !== sourceId));
     }
   };
 
   const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedSources(paginatedSources.map(source => source.id));
+      setSelectedSources(paginatedSources.map((source) => source.id));
     } else {
       setSelectedSources([]);
     }
+  };
+
+  const handleAddSource = () => {
+    navigate("/admin/source");
   };
 
   const handleEdit = (source) => {
@@ -111,7 +126,11 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
   };
 
   const handleDelete = (source) => {
-    if (window.confirm(`Are you sure you want to delete "${source.name}"? This action cannot be undone.`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to delete "${source.name}"? This action cannot be undone.`
+      )
+    ) {
       if (onDeleteSource) {
         onDeleteSource(source.id);
         toast({
@@ -139,12 +158,16 @@ Source Details:
 - Status: ${source.status}
 - Created: ${new Date(source.createdAt).toLocaleDateString()}
 - Last Sync: ${new Date(source.lastSync).toLocaleDateString()}
-${source.customPrompt ? `- Custom Prompt: ${source.customPrompt}` : ''}
-${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : ''}
+${source.customPrompt ? `- Custom Prompt: ${source.customPrompt}` : ""}
+${
+  source.dataSelectionMode
+    ? `- Data Selection: ${source.dataSelectionMode}`
+    : ""
+}
     `.trim();
-    
+
     alert(details);
-    
+
     toast({
       title: "Source Details",
       description: `Viewing configuration for ${source.name}`,
@@ -155,11 +178,11 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
     const statusConfig = {
       active: { className: "bg-[#4CAF50] text-white" },
       maintenance: { className: "bg-[#FF9800] text-white" },
-      inactive: { className: "bg-[#F44336] text-white" }
+      inactive: { className: "bg-[#F44336] text-white" },
     };
 
     const config = statusConfig[status] || statusConfig.inactive;
-    
+
     return (
       <Badge className={config.className}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -177,8 +200,9 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
             Manage your connected data sources and brewing configurations
           </p>
         </div>
-        <Button 
-          onClick={onAddSource}
+        <Button
+          // onClick={onAddSource}
+          onClick={handleAddSource}
           className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
         >
           <Plus className="h-4 w-4" />
@@ -208,11 +232,14 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                 <TableRow className="bg-gray-50 border-gray-200">
                   <TableHead className="w-12 text-gray-700">
                     <Checkbox
-                      checked={selectedSources.length === paginatedSources.length && paginatedSources.length > 0}
+                      checked={
+                        selectedSources.length === paginatedSources.length &&
+                        paginatedSources.length > 0
+                      }
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer text-gray-700 font-medium"
                     onClick={() => handleSort("name")}
                   >
@@ -221,7 +248,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer text-gray-700 font-medium"
                     onClick={() => handleSort("type")}
                   >
@@ -230,9 +257,13 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-gray-700 font-medium">Location</TableHead>
-                  <TableHead className="text-gray-700 font-medium">Auth Type</TableHead>
-                  <TableHead 
+                  <TableHead className="text-gray-700 font-medium">
+                    Location
+                  </TableHead>
+                  <TableHead className="text-gray-700 font-medium">
+                    Auth Type
+                  </TableHead>
+                  <TableHead
                     className="cursor-pointer text-gray-700 font-medium"
                     onClick={() => handleSort("status")}
                   >
@@ -241,40 +272,71 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-gray-700 font-medium">Actions</TableHead>
+                  <TableHead className="text-gray-700 font-medium">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedSources.map((source) => (
-                  <TableRow key={source.id} className="bg-white hover:bg-gray-50 border-gray-200">
+                  <TableRow
+                    key={source.id}
+                    className="bg-white hover:bg-gray-50 border-gray-200"
+                  >
                     <TableCell>
                       <Checkbox
                         checked={selectedSources.includes(source.id)}
-                        onCheckedChange={(checked) => handleSelectSource(source.id, checked)}
+                        onCheckedChange={(checked) =>
+                          handleSelectSource(source.id, checked)
+                        }
                       />
                     </TableCell>
-                    <TableCell className="font-medium text-[#2196F3]">{source.name}</TableCell>
-                    <TableCell className="text-gray-600">{source.type}</TableCell>
-                    <TableCell className="text-gray-600">{source.location || 'N/A'}</TableCell>
-                    <TableCell className="text-gray-600">{source.configuration?.authType || source.configuration?.authMethod || 'N/A'}</TableCell>
-                    <TableCell>{getStatusBadge(source.status?.toLowerCase() || 'active')}</TableCell>
+                    <TableCell className="font-medium text-[#2196F3]">
+                      {source.name}
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {source.type}
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {source.location || "N/A"}
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {source.configuration?.authType ||
+                        source.configuration?.authMethod ||
+                        "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(source.status?.toLowerCase() || "active")}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          >
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white border-gray-200">
-                          <DropdownMenuItem onClick={() => handleView(source)} className="text-gray-700 hover:bg-gray-100">
+                        <DropdownMenuContent
+                          align="end"
+                          className="bg-white border-gray-200"
+                        >
+                          <DropdownMenuItem
+                            onClick={() => handleView(source)}
+                            className="text-gray-700 hover:bg-gray-100"
+                          >
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(source)} className="text-gray-700 hover:bg-gray-100">
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(source)}
+                            className="text-gray-700 hover:bg-gray-100"
+                          >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleDelete(source)}
                             className="text-red-600 hover:bg-gray-100"
                           >
@@ -294,30 +356,46 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
           {totalPages > 1 && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, sortedSources.length)} of {sortedSources.length} sources
+                Showing {startIndex + 1} to{" "}
+                {Math.min(startIndex + itemsPerPage, sortedSources.length)} of{" "}
+                {sortedSources.length} sources
               </div>
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                    <PaginationPrevious
+                      onClick={() =>
+                        setCurrentPage(Math.max(1, currentPage - 1))
+                      }
+                      className={
+                        currentPage === 1
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
                   </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        onClick={() => setCurrentPage(page)}
-                        isActive={currentPage === page}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
                   <PaginationItem>
-                    <PaginationNext 
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                      className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+                    <PaginationNext
+                      onClick={() =>
+                        setCurrentPage(Math.min(totalPages, currentPage + 1))
+                      }
+                      className={
+                        currentPage === totalPages
+                          ? "pointer-events-none opacity-50"
+                          : ""
+                      }
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -330,8 +408,12 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center">
             <Database className="h-8 w-8 text-[#2196F3]" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No data sources yet</h3>
-          <p className="text-gray-600 mb-4">Start by adding your first data source to begin analyzing data</p>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No data sources yet
+          </h3>
+          <p className="text-gray-600 mb-4">
+            Start by adding your first data source to begin analyzing data
+          </p>
           <Button
             onClick={onAddSource}
             variant="outline"
