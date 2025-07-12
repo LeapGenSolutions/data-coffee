@@ -39,6 +39,10 @@ import {
 } from "lucide-react";
 import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
+import { useSaveSource } from "../hooks/useSaveSource";
+import { useUserWorkspaces } from "../hooks/useUserWorkspaces";
+import { useSelector } from "react-redux";
+import { navigate } from "wouter/use-browser-location";
 
 // Define basic schema and schemas for each source type and location
 const baseSchema = z.object({
@@ -194,12 +198,22 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
+export function SourceForm({ onCancel, onSourceSaved }) {
+  // Handler for Save Source button
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
+  const [selectedWorkspace, setSelectedWorkspace] = useState("");
   const testAzureBlobConnection = useTestAzureBlobConnection();
   const listAzureBlobFiles = useListAzureBlobFiles();
+
+  // Workspace dropdown state
+  const user = useSelector((state) => state.me.me);
+  const {
+    data: workspacesData,
+    isLoading: isWorkspacesLoading,
+    error: workspacesError
+  } = useUserWorkspaces(user?.email);
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -216,6 +230,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
       location: "on-prem",
       customPrompt: "",
       dataSelectionMode: "",
+      workspace: ""
     },
   });
 
@@ -360,6 +375,62 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
     ],
   };
 
+  const saveSourceMutation = useSaveSource();
+
+  function handleSaveSource() {
+    const currentData = form.getValues();
+
+    // Create a new source object with all the form data
+    const newSource = {
+      id: Date.now(),
+      name: currentData.sourceName || "Untitled Source",
+      type: currentData.sourceType || "unknown",
+      location: location || currentData.location || "on-prem",
+      customPrompt: currentData.customPrompt || "",
+      dataSelectionMode: selectionMode || "all",
+      selectedTables: selectedTables || [],
+      selectedColumns: selectedColumns || [],
+      customQuery: customQuery || "",
+      configuration: currentData,
+      status: "Active",
+      lastSync: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      workspace: currentData.workspace || selectedWorkspace || undefined
+    };
+
+    if (!user || !user.email) {
+      toast({
+        title: "User Email Not Found",
+        description: "Cannot save source because user email is missing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+
+    saveSourceMutation.mutate(
+      { email: user.email, newSource },
+      {
+        onSuccess: (data) => {
+          toast({
+            title: "Data Source Saved Successfully!",
+            description: `${newSource.name} has been added to your data sources.`,
+          });
+          if (onSourceSaved) {
+            onSourceSaved(data || newSource);
+          }
+          navigate("/dashboard");
+        },
+        onError: (error) => {
+          toast({
+            title: "Failed to Save Data Source",
+            description: error?.response?.data?.message || error.message || "An error occurred while saving the data source.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  }
   // Update form state when source type changes
   const handleSourceTypeChange = (value) => {
     setSourceType(value);
@@ -401,50 +472,6 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
 
     form.reset(newValues);
   };
-
-  // Handle form submission
-  const onSubmit = (data) => {
-    console.log("onSubmit called with data:", data);
-    console.log("Current form values:", form.getValues());
-    console.log("Selection mode:", selectionMode);
-    console.log("Selected tables:", selectedTables);
-
-    // Create a new source object with all the form data
-    const newSource = {
-      id: Date.now(), // Simple ID generation
-      name: data.sourceName || "Untitled Source",
-      type: data.sourceType || "unknown",
-      location: location || data.location || "on-prem",
-      customPrompt: data.customPrompt || "",
-      dataSelectionMode: selectionMode || "all",
-      selectedTables: selectedTables || [],
-      selectedColumns: selectedColumns || {},
-      customQuery: customQuery || "",
-      configuration: data, // Store all form data as configuration
-      status: "Active",
-      lastSync: new Date().toISOString(),
-      createdAt: new Date().toISOString()
-    };
-
-    console.log("New source object:", newSource);
-
-    // Show success message
-    toast({
-      title: "Data Source Saved Successfully!",
-      description: `${newSource.name} has been added to your data sources.`,
-    });
-
-    // Call the onSourceSaved callback to update the parent component
-    if (onSourceSaved) {
-      console.log("Calling onSourceSaved with:", newSource);
-      onSourceSaved(newSource);
-    } else {
-      console.log("onSourceSaved callback not available");
-    }
-
-    onComplete();
-  };
-
 
   // Navigation between steps
   const nextStep = () => {
@@ -592,6 +619,35 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
         ];
     }
   };
+
+  // Workspace dropdown UI
+  const renderWorkspaceDropdown = () => (
+    <div className="mb-6">
+      <label htmlFor="workspace-select" className="block text-sm font-medium text-gray-700 mb-1">
+        Workspace
+      </label>
+      <select
+        id="workspace-select"
+        className="block w-full border border-gray-300 rounded-md p-2 bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={form.watch("workspace")}
+        onChange={e => {
+          setSelectedWorkspace(e.target.value);
+          form.setValue("workspace", e.target.value);
+        }}
+        disabled={isWorkspacesLoading || !!workspacesError}
+      >
+        <option value="">{isWorkspacesLoading ? "Loading..." : "Select a workspace"}</option>
+        {workspacesData && workspacesData.map(ws => (
+          <option key={ws.id || ws.workspaceName} value={ws.workspaceName}>
+            {ws.workspaceName}
+          </option>
+        ))}
+      </select>
+      {workspacesError && (
+        <p className="text-xs text-red-600 mt-1">Failed to load workspaces</p>
+      )}
+    </div>
+  );
 
   // Render data selection step
   const renderDataSelectionStep = () => {
@@ -2491,6 +2547,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
                 name="sourceName"
                 render={({ field }) => (
                   <FormItem>
+                    {renderWorkspaceDropdown()}
                     <FormLabel className="text-sm font-medium text-gray-700">
                       Source Name
                     </FormLabel>
@@ -2701,7 +2758,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
 
       <CardContent className="p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form className="space-y-6">
             {renderStep()}
           </form>
         </Form>
@@ -2742,11 +2799,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
           ) : (
             <Button
               type="button"
-              onClick={() => {
-                console.log("Save Source button clicked");
-                const currentData = form.getValues();
-                onSubmit(currentData);
-              }}
+              onClick={handleSaveSource}
               className="bg-[#2196F3] hover:bg-[#1976D2] text-white"
             >
               Save Source

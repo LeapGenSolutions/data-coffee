@@ -2,13 +2,16 @@ import React, { useState, useRef, useEffect } from "react";
 import { Sidebar } from "../components/sidebar";
 import { Menu } from "lucide-react";
 import { Bell } from "lucide-react";
+import { useSelector } from "react-redux";
 
 export default function DashboardLayout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
-
+  const user = useSelector((state) => state.me.me);
+  console.log(user);
+  
   const notifRef = useRef(null);
   const settingsRef = useRef(null);
   const accountRef = useRef(null);
@@ -116,7 +119,7 @@ export default function DashboardLayout({ children }) {
                 <div className="h-8 w-8 rounded-full bg-purple-500 flex items-center justify-center text-white font-semibold">
                   U
                 </div>
-                <span className="text-brown-700 font-medium">User</span>
+                <span className="text-brown-700 font-medium">{user.given_name}</span>
               </button>
               {showAccountMenu && (
                 <div className="absolute right-0 top-12 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-50">

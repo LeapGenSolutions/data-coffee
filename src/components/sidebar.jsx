@@ -10,20 +10,31 @@ import {
   LogOut,
   X} from "lucide-react";
 
-const navigation = [
+import { useSelector } from "react-redux";
+
+const navigationBase = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
-  { name: "Admin Panel", href: "/admin", icon: Settings },
+  { name: "Admin Panel", href: "/admin", icon: Settings, role: "barista" },
   { name: "User Management", href: "/user-management", icon: Users },
-  { name: "Control Panel", href: "/control-panel", icon: LayoutGrid }, 
+  { name: "Control Panel", href: "/control-panel", icon: LayoutGrid },
 ];
+
 
 export function Sidebar({ isMobileOpen = false, onMobileClose }) {
   const [location] = useLocation();
+  const user = useSelector((state) => state.me.me);
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
     window.location.href = '/';
   };
+
+  // Filter navigation based on user role for "Admin Panel"
+  const navigation = navigationBase.filter(item => {
+    if (!item.role) return true;
+    if (!user || !user.roles) return false;
+    return user.roles.includes(item.role);
+  });
 
   return (
     <>
