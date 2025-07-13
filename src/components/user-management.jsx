@@ -49,9 +49,11 @@ import {
 } from "../components/ui/dropdown-menu";
 import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
 import { CSSTransition } from 'react-transition-group';
+import { useParams } from "wouter";
+import useSavePipeline from "../hooks/useSavePipeline";
+import { useSelector } from "react-redux";
 
 function UserManagement() {
-  console.log('UserManagement component mounted');
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -88,6 +90,9 @@ function UserManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
+  const {workspaceID} = useParams();  
+  const workspaces = useSelector((state) => state.workspaces.workspaces);
+  const currentWorkspace = workspaces.find(ws => ws.id === workspaceID);
 
   // Sample user data with medical context
   const [users, setUsers] = useState([
@@ -207,7 +212,9 @@ function UserManagement() {
     );
   };
 
-  const handleCreateUser = () => {
+  const savePipeline = useSavePipeline();
+
+  const handleCreateUserPipeline = async () => {
     if (currentStep === 1) {
       if (!newUser.name) {
         toast({
@@ -279,13 +286,30 @@ function UserManagement() {
         processingAgent: selectedProcessingAgent,
         schedule: runConfiguration.schedule,
         notifications: runConfiguration.notifications,
-        autoClose: runConfiguration.autoClose,
         status: newUser.status || "Active",
+        workspaceID: currentWorkspace.id,
+        workspaceName: currentWorkspace.workspaceName,
         created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
         destinationType,
         connectionString,
         enableSurroundAI,
       };
+      savePipeline.mutateAsync(pipeline, {
+        onSuccess: (data) => {
+          toast({
+            title: "Pipeline Saved",
+            description: `${data.name} has been saved successfully.`,
+            variant: "success",
+          });
+        },
+        onError: (error) => {
+          toast({
+              title: "API Error",
+              description: error?.message || "Failed to save pipeline to server.",
+              variant: "destructive",
+            });
+          }
+        });
 
       if (isEditing && editPipeline) {
         setUsers(users => users.map(u => u.id === pipeline.id ? pipeline : u));
@@ -951,7 +975,7 @@ function UserManagement() {
                   </Button>
                 )}
                 <Button
-                  onClick={handleCreateUser}
+                  onClick={handleCreateUserPipeline}
                   className="bg-[#2196F3] hover:bg-[#1976D2] text-white px-8 py-2 font-medium"
                 >
                   {currentStep === 1 
