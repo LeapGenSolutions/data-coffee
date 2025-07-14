@@ -50,6 +50,7 @@ import {
 import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
 import { CSSTransition } from 'react-transition-group';
 import { useParams } from "wouter";
+import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
 import { useSelector } from "react-redux";
 
@@ -90,9 +91,13 @@ function UserManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
-  const {workspaceID} = useParams();  
+  const { workspaceID } = useParams();
   const workspaces = useSelector((state) => state.workspaces.workspaces);
   const currentWorkspace = workspaces.find(ws => ws.id === workspaceID);
+
+  // Fetch available sources for the current workspace
+  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(workspaceID);
+  console.log(availableSources);
 
   // Sample user data with medical context
   const [users, setUsers] = useState([
@@ -304,12 +309,12 @@ function UserManagement() {
         },
         onError: (error) => {
           toast({
-              title: "API Error",
-              description: error?.message || "Failed to save pipeline to server.",
-              variant: "destructive",
-            });
-          }
-        });
+            title: "API Error",
+            description: error?.message || "Failed to save pipeline to server.",
+            variant: "destructive",
+          });
+        }
+      });
 
       if (isEditing && editPipeline) {
         setUsers(users => users.map(u => u.id === pipeline.id ? pipeline : u));
@@ -381,9 +386,9 @@ function UserManagement() {
       users.map((user) =>
         user.id === userId
           ? {
-              ...user,
-              status: user.status === "Active" ? "Inactive" : "Active",
-            }
+            ...user,
+            status: user.status === "Active" ? "Inactive" : "Active",
+          }
           : user,
       ),
     );
@@ -588,10 +593,10 @@ function UserManagement() {
                   {currentStep === 1
                     ? "Create Data Pipeline"
                     : currentStep === 2
-                    ? "Select Security Techniques"
-                    : currentStep === 3
-                    ? "Select Processing Agent"
-                    : "Run and Close Configuration"}
+                      ? "Select Security Techniques"
+                      : currentStep === 3
+                        ? "Select Processing Agent"
+                        : "Run and Close Configuration"}
                 </DialogTitle>
                 {currentStep === 2 && (
                   <div className="text-right text-sm text-gray-500">
@@ -612,10 +617,10 @@ function UserManagement() {
                   {currentStep === 1
                     ? "Secure your data with privacy techniques."
                     : currentStep === 3
-                    ? "Choose the engine or service that will perform data masking, redaction, anonymization, or tokenization."
-                    : currentStep === 4
-                    ? "Configure when and how the pipeline will run, including scheduling and closure settings."
-                    : ""}
+                      ? "Choose the engine or service that will perform data masking, redaction, anonymization, or tokenization."
+                      : currentStep === 4
+                        ? "Configure when and how the pipeline will run, including scheduling and closure settings."
+                        : ""}
                 </DialogDescription>
               </DialogHeader>
 
@@ -666,26 +671,30 @@ function UserManagement() {
                       onValueChange={(value) =>
                         setNewUser({ ...newUser, sourceDatabase: value })
                       }
+                      disabled={sourcesLoading}
                     >
                       <SelectTrigger
                         className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12"
                         style={{ backgroundColor: "white", color: "#111827" }}
                       >
-                        <SelectValue placeholder="Select a data source or connection string" />
+                        <SelectValue placeholder={sourcesLoading ? "Loading sources..." : "Select a data source or connection string"} />
                       </SelectTrigger>
                       <SelectContent className="bg-white">
-                        <SelectItem value="Patient Data Source">
-                          Patient Data Source
-                        </SelectItem>
-                        <SelectItem value="Clinical Data Source">
-                          Clinical Data Source
-                        </SelectItem>
-                        <SelectItem value="Financial Data Source">
-                          Financial Data Source
-                        </SelectItem>
-                        <SelectItem value="Research Data Source">
-                          Research Data Source
-                        </SelectItem>
+                        {sourcesLoading && (
+                          <div className="px-4 py-2 text-gray-500">Loading...</div>
+                        )}
+                        {sourcesError && (
+                          <div className="px-4 py-2 text-red-500">Error loading sources</div>
+                        )}
+                        {Array.isArray(availableSources) && availableSources.length > 0 ? (
+                          availableSources.map((src) => (
+                            <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
+                              {src?.configuration?.sourceName}
+                            </SelectItem>
+                          ))
+                        ) : !sourcesLoading && !sourcesError ? (
+                          <div className="px-4 py-2 text-gray-500">No sources found</div>
+                        ) : null}
                       </SelectContent>
                     </Select>
                   </div>
@@ -713,11 +722,10 @@ function UserManagement() {
                         <Button
                           key={technique.id}
                           variant="outline"
-                          className={`h-16 flex flex-col items-center gap-2 border-2 transition-all rounded-lg ${
-                            selectedTechniques.includes(technique.id)
+                          className={`h-16 flex flex-col items-center gap-2 border-2 transition-all rounded-lg ${selectedTechniques.includes(technique.id)
                               ? "border-[#2196F3] bg-blue-50 text-[#2196F3] shadow-md"
                               : "border-gray-300 hover:border-[#2196F3] hover:bg-blue-25 bg-white"
-                          }`}
+                            }`}
                           onClick={() => handleTechniqueToggle(technique.id)}
                         >
                           <span className="text-xl">{technique.icon}</span>
@@ -742,22 +750,20 @@ function UserManagement() {
                     <div className="flex gap-4 mb-6">
                       <Button
                         variant="outline"
-                        className={`flex items-center gap-2 px-4 py-2 ${
-                          destinationType === "connection"
+                        className={`flex items-center gap-2 px-4 py-2 ${destinationType === "connection"
                             ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
                             : "border-gray-300 text-gray-700"
-                        }`}
+                          }`}
                         onClick={() => setDestinationType("connection")}
                       >
                         Use connection string
                       </Button>
                       <Button
                         variant="outline"
-                        className={`flex items-center gap-2 px-4 py-2 ${
-                          destinationType === "dataset"
+                        className={`flex items-center gap-2 px-4 py-2 ${destinationType === "dataset"
                             ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
                             : "border-gray-300 text-gray-700"
-                        }`}
+                          }`}
                         onClick={() => setDestinationType("dataset")}
                       >
                         Use existing dataset
@@ -804,18 +810,21 @@ function UserManagement() {
                             <SelectValue placeholder="Select from saved datasets" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
-                            <SelectItem value="Analytics Warehouse Dataset">
-                              Analytics Warehouse Dataset
-                            </SelectItem>
-                            <SelectItem value="Secure Archive Dataset">
-                              Secure Archive Dataset
-                            </SelectItem>
-                            <SelectItem value="Reporting Dataset">
-                              Reporting Dataset
-                            </SelectItem>
-                            <SelectItem value="Test Environment Dataset">
-                              Test Environment Dataset
-                            </SelectItem>
+                            {sourcesLoading && (
+                              <div className="px-4 py-2 text-gray-500">Loading...</div>
+                            )}
+                            {sourcesError && (
+                              <div className="px-4 py-2 text-red-500">Error loading sources</div>
+                            )}
+                            {Array.isArray(availableSources) && availableSources.length > 0 ? (
+                              availableSources.map((src) => (
+                                <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
+                                  {src?.configuration?.sourceName}
+                                </SelectItem>
+                              ))
+                            ) : !sourcesLoading && !sourcesError ? (
+                              <div className="px-4 py-2 text-gray-500">No sources found</div>
+                            ) : null}
                           </SelectContent>
                         </Select>
                         <p className="text-sm text-gray-600">
@@ -869,13 +878,13 @@ function UserManagement() {
                     <p className="text-sm text-gray-600 mb-4">
                       Configure when and how the pipeline will run, including scheduling and closure settings.
                     </p>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <Label className="text-sm font-medium text-gray-700 mb-2 block">
                           Run Schedule
                         </Label>
-                        <Select value={runConfiguration.schedule} onValueChange={(value) => setRunConfiguration({...runConfiguration, schedule: value})}>
+                        <Select value={runConfiguration.schedule} onValueChange={(value) => setRunConfiguration({ ...runConfiguration, schedule: value })}>
                           <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
                             <SelectValue placeholder="Select run schedule" />
                           </SelectTrigger>
@@ -894,7 +903,7 @@ function UserManagement() {
                           <Checkbox
                             id="notifications"
                             checked={runConfiguration.notifications}
-                            onCheckedChange={(checked) => setRunConfiguration({...runConfiguration, notifications: checked})}
+                            onCheckedChange={(checked) => setRunConfiguration({ ...runConfiguration, notifications: checked })}
                             className="border-gray-400"
                           />
                           <Label htmlFor="notifications" className="text-sm text-gray-700 font-medium">
@@ -905,7 +914,7 @@ function UserManagement() {
                           <Checkbox
                             id="autoClose"
                             checked={runConfiguration.autoClose}
-                            onCheckedChange={(checked) => setRunConfiguration({...runConfiguration, autoClose: checked})}
+                            onCheckedChange={(checked) => setRunConfiguration({ ...runConfiguration, autoClose: checked })}
                             className="border-gray-400"
                           />
                           <Label htmlFor="autoClose" className="text-sm text-gray-700 font-medium">
@@ -978,11 +987,11 @@ function UserManagement() {
                   onClick={handleCreateUserPipeline}
                   className="bg-[#2196F3] hover:bg-[#1976D2] text-white px-8 py-2 font-medium"
                 >
-                  {currentStep === 1 
-                    ? "Create Pipeline" 
-                    : currentStep === 4 
-                    ? "Complete Pipeline" 
-                    : "Next →"}
+                  {currentStep === 1
+                    ? "Create Pipeline"
+                    : currentStep === 4
+                      ? "Complete Pipeline"
+                      : "Next →"}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -991,121 +1000,121 @@ function UserManagement() {
 
         {/* Users Table */}
         <div className="bg-white rounded-lg border border-gray-200">
-           <Table
-             className="w-full table-fixed"
-           >
-             <TableHeader>
-               <TableRow className="bg-[#2196F3] border-blue-600">
-                 <TableHead className="text-white font-medium">
-                   Pipeline Name
-                 </TableHead>
-                 <TableHead className="text-white font-medium">Source</TableHead>
-                 <TableHead className="text-white font-medium">
-                   Destination
-                 </TableHead>
-                 <TableHead className="text-white font-medium">
-                   Technique
-                 </TableHead>
-                 <TableHead className="text-white font-medium">
-                   Agent
-                 </TableHead>
-                 <TableHead className="text-white font-medium">
-                   Schedule
-                 </TableHead>
-                 <TableHead className="text-white font-medium">Status</TableHead>
-                 <TableHead className="text-white font-medium">
-                   Created
-                 </TableHead>
-                 <TableHead className="text-white font-medium">
-                   Actions
-                 </TableHead>
-                 <TableHead className="text-white font-medium">
-                   Thought Bubble
-                 </TableHead>
-               </TableRow>
-             </TableHeader>
-             <TableBody>
-               {users.map((pipeline) => (
-                 <TableRow
-                   key={pipeline.id}
-                   className="bg-white hover:bg-gray-50 border-gray-200"
-                 >
-                   <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-normal">
-                     {pipeline.name}
-                   </TableCell>
-                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                     {pipeline.source}
-                   </TableCell>
-                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                     {pipeline.destination}
-                   </TableCell>
-                   <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
-                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                     {pipeline.processingAgent || "Not specified"}
-                   </TableCell>
-                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                     {pipeline.schedule || "Not configured"}
-                   </TableCell>
-                   <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
-                   <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                     {pipeline.created}
-                   </TableCell>
-                   <TableCell>
-                     <DropdownMenu>
-                       <DropdownMenuTrigger asChild>
-                         <Button
-                           variant="ghost"
-                           className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                         >
-                           <MoreHorizontal className="h-4 w-4" />
-                         </Button>
-                       </DropdownMenuTrigger>
-                       <DropdownMenuContent align="end">
-                         <DropdownMenuItem
-                           onClick={() => handleEditPipeline(pipeline)}
-                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                         >
-                           <Pencil className="h-4 w-4 text-blue-500" /> Edit
-                         </DropdownMenuItem>
-                         <DropdownMenuItem
-                           onClick={() => setViewPipeline(pipeline)}
-                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                         >
-                           <Eye className="h-4 w-4 text-blue-500" /> View
-                         </DropdownMenuItem>
-                         <DropdownMenuItem
-                           onClick={() => handleClonePipeline(pipeline)}
-                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                         >
-                           <Copy className="h-4 w-4 text-blue-500" /> Clone
-                         </DropdownMenuItem>
-                         <DropdownMenuItem
-                           onClick={() => handleManualRerun(pipeline)}
-                           className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                         >
-                           <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run Manually
-                         </DropdownMenuItem>
-                       </DropdownMenuContent>
-                     </DropdownMenu>
-                   </TableCell>
-                   <TableCell className="whitespace-normal p-1 min-w-[100px] max-w-[140px] text-sm">
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       className="flex items-center gap-2 font-semibold text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50 px-2 py-1 text-sm"
-                       onClick={() => {
-                         setPromptPipeline(pipeline);
-                         setShowPromptListModal(true);
-                       }}
-                     >
-                       <Sparkles className="h-4 w-4 text-purple-500" />
-                     </Button>
-                   </TableCell>
-                 </TableRow>
-               ))}
-             </TableBody>
-           </Table>
-         </div>
+          <Table
+            className="w-full table-fixed"
+          >
+            <TableHeader>
+              <TableRow className="bg-[#2196F3] border-blue-600">
+                <TableHead className="text-white font-medium">
+                  Pipeline Name
+                </TableHead>
+                <TableHead className="text-white font-medium">Source</TableHead>
+                <TableHead className="text-white font-medium">
+                  Destination
+                </TableHead>
+                <TableHead className="text-white font-medium">
+                  Technique
+                </TableHead>
+                <TableHead className="text-white font-medium">
+                  Agent
+                </TableHead>
+                <TableHead className="text-white font-medium">
+                  Schedule
+                </TableHead>
+                <TableHead className="text-white font-medium">Status</TableHead>
+                <TableHead className="text-white font-medium">
+                  Created
+                </TableHead>
+                <TableHead className="text-white font-medium">
+                  Actions
+                </TableHead>
+                <TableHead className="text-white font-medium">
+                  Thought Bubble
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {users.map((pipeline) => (
+                <TableRow
+                  key={pipeline.id}
+                  className="bg-white hover:bg-gray-50 border-gray-200"
+                >
+                  <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-normal">
+                    {pipeline.name}
+                  </TableCell>
+                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    {pipeline.source}
+                  </TableCell>
+                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    {pipeline.destination}
+                  </TableCell>
+                  <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    {pipeline.processingAgent || "Not specified"}
+                  </TableCell>
+                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    {pipeline.schedule || "Not configured"}
+                  </TableCell>
+                  <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    {pipeline.created}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleEditPipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <Pencil className="h-4 w-4 text-blue-500" /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => setViewPipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <Eye className="h-4 w-4 text-blue-500" /> View
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleClonePipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <Copy className="h-4 w-4 text-blue-500" /> Clone
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleManualRerun(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run Manually
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                  <TableCell className="whitespace-normal p-1 min-w-[100px] max-w-[140px] text-sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2 font-semibold text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50 px-2 py-1 text-sm"
+                      onClick={() => {
+                        setPromptPipeline(pipeline);
+                        setShowPromptListModal(true);
+                      }}
+                    >
+                      <Sparkles className="h-4 w-4 text-purple-500" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       {!isApplyingPrompt && !showSuccessTransition && (
         <>
