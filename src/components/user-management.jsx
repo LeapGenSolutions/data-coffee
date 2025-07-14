@@ -99,6 +99,10 @@ function UserManagement() {
   const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspaceId);
   console.log(availableSources);
 
+  // Fetch available sources for the current workspace
+  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(workspaceID);
+  console.log(availableSources);
+
   // Sample user data with medical context
   const [users, setUsers] = useState([
     {
