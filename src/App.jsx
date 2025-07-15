@@ -6,8 +6,13 @@ import Home from "./pages/home.jsx";
 import AdminPanel from "./pages/admin-panel.jsx";
 import UserManagementPage from "./pages/user-management.jsx";
 import ControlPanel from "./pages/ControlPanel.jsx";
-import { AuthenticatedTemplate, UnauthenticatedTemplate, useIsAuthenticated, useMsal } from "@azure/msal-react";
-import ChatbotWidget from './components/chatbot-widget.jsx';
+import {
+  AuthenticatedTemplate,
+  UnauthenticatedTemplate,
+  useIsAuthenticated,
+  useMsal,
+} from "@azure/msal-react";
+import ChatbotWidget from "./components/chatbot-widget.jsx";
 import { Provider, useDispatch } from "react-redux";
 import { useEffect, useState } from "react";
 import { loginRequest } from "./authConfig.js";
@@ -20,15 +25,33 @@ import fetchWorkspaces from "./redux/workspace-actions.js";
 
 function Router() {
   const user = useSelector((state) => state.me.me);
-  const hasBaristaRole = user && Array.isArray(user.roles) && user.roles.includes("barista");
+  const hasBaristaRole =
+    user && Array.isArray(user.roles) && user.roles.includes("barista");
 
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Home} />
-      <Route path="/admin/:workspaceID" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
-      <Route path="/admin-panel" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
-      <Route path="/user-management/:workspaceID" component={UserManagementPage} />
+      <Route
+        path="/admin/:workspaceID"
+        component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route
+        path="/admin/:workspaceID/source"
+        component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route
+        path="/admin/:workspaceID/source/edit/:id"
+        component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route
+        path="/admin-panel"
+        component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route
+        path="/user-management/:workspaceID"
+        component={UserManagementPage}
+      />
       <Route path="/user" component={UserManagementPage} />
       <Route path="/control-panel" component={ControlPanel} />
       <Route>404: Not Found!</Route>
@@ -36,13 +59,12 @@ function Router() {
   );
 }
 
-
 function Main() {
   const isAuthenticated = useIsAuthenticated();
   const { instance, accounts } = useMsal();
-  const [hasRole, setHasRole] = useState(true)
+  const [hasRole, setHasRole] = useState(true);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -62,20 +84,23 @@ function Main() {
         account: accounts[0],
       })
       .then((response) => {
-        dispatch(setMyDetails(response.idTokenClaims))
-        if (response.idTokenClaims.roles && response.idTokenClaims.roles.includes("SeismicDoctors")) {
-          setHasRole(true)
+        dispatch(setMyDetails(response.idTokenClaims));
+        if (
+          response.idTokenClaims.roles &&
+          response.idTokenClaims.roles.includes("SeismicDoctors")
+        ) {
+          setHasRole(true);
         }
       });
   }
-  
+
   useEffect(() => {
     if (isAuthenticated) {
-      requestProfileData()
+      requestProfileData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated])
-  
+  }, [isAuthenticated]);
+
   useEffect(() => {
     if (isAuthenticated && accounts.length > 0 && workspaces.length === 0) {
       dispatch(fetchWorkspaces(accounts[0].username));
@@ -84,26 +109,28 @@ function Main() {
 
   return (
     <>
-      {hasRole ? <AuthenticatedTemplate>
-        <QueryClientProvider client={queryClient}>
-          <Router />
-          <Toaster />
-          <ChatbotWidget />
-        </QueryClientProvider>
-      </AuthenticatedTemplate> :
+      {hasRole ? (
         <AuthenticatedTemplate>
-          Sign is successful but you dont previlaged role to view this app. Try contacting your admin
+          <QueryClientProvider client={queryClient}>
+            <Router />
+            <Toaster />
+            <ChatbotWidget />
+          </QueryClientProvider>
         </AuthenticatedTemplate>
-      }
+      ) : (
+        <AuthenticatedTemplate>
+          Sign is successful but you dont previlaged role to view this app. Try
+          contacting your admin
+        </AuthenticatedTemplate>
+      )}
       <UnauthenticatedTemplate>
         <LoginPage />
       </UnauthenticatedTemplate>
     </>
-  )
+  );
 }
 
 function App() {
-
   return (
     <Provider store={store}>
       <div className="App">
@@ -112,6 +139,5 @@ function App() {
     </Provider>
   );
 }
-
 
 export default App;

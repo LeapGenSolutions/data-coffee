@@ -29,7 +29,12 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { toast } from "./ui/toaster.jsx";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../components/ui/tabs";
 import {
   ChevronRight,
   Database,
@@ -198,7 +203,7 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ onCancel, onSourceSaved }) {
+export function SourceForm({ onCancel, onSourceSaved, initialSource }) {
   // Handler for Save Source button
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
@@ -210,7 +215,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
   // Workspace dropdown state
   const user = useSelector((state) => state.me.me);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const currentWorkspace = workspaces.find(ws => ws.id === workspaceID);
+  const currentWorkspace = workspaces.find((ws) => ws.id === workspaceID);
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -226,7 +231,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       sourceType: "",
       location: "on-prem",
       customPrompt: "",
-      dataSelectionMode: ""
+      dataSelectionMode: "",
     },
   });
 
@@ -243,6 +248,26 @@ export function SourceForm({ onCancel, onSourceSaved }) {
     }
     // eslint-disable-next-line
   }, [watchSourceType, watchLocation]);
+
+  useEffect(() => {
+    if (initialSource) {
+      form.reset({
+        id: initialSource.id,
+        createdAt: initialSource.createdAt,
+        sourceName: initialSource.name || "",
+        sourceType: initialSource.type || "",
+        location: initialSource.location || "",
+        authType: initialSource.authType || "",
+        customPrompt: initialSource.customPrompt || "",
+        ...initialSource.configuration,
+        step: 1,
+      });
+      setStep(1);
+    } else {
+      form.reset({ id: "", createdAt: "" });
+      setStep(1);
+    }
+  }, [initialSource, form]);
 
   // Data selection state
   const [selectionMode, setSelectionMode] = useState("all");
@@ -373,61 +398,49 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
   const saveSourceMutation = useSaveSource();
 
-  function handleSaveSource() {
+  const handleSaveSource = () => {
     const currentData = form.getValues();
 
-    // Create a new source object with all the form data
     const newSource = {
-      id: Date.now(),
+      id: initialSource?.id || currentData.id || `source-${Date.now()}`,
       name: currentData.sourceName || "Untitled Source",
       type: currentData.sourceType || "unknown",
-      location: location || currentData.location || "on-prem",
+      location: currentData.location || "on-prem",
+      authType: currentData.authType || "",
       customPrompt: currentData.customPrompt || "",
-      dataSelectionMode: selectionMode || "all",
-      selectedTables: selectedTables || [],
-      selectedColumns: selectedColumns || [],
-      customQuery: customQuery || "",
+      dataSelectionMode: currentData.dataSelectionMode || "all",
+      selectedTables: currentData.selectedTables || [],
+      selectedColumns: currentData.selectedColumns || [],
+      customQuery: currentData.customQuery || "",
       configuration: currentData,
       status: "Active",
       lastSync: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
+      createdAt:
+        initialSource?.createdAt ||
+        currentData.createdAt ||
+        new Date().toISOString(),
       workspaceId: currentWorkspace.id,
-      workspaceName: currentWorkspace.workspaceName
-    };    
-
-    if (!user || !user.email) {
-      toast({
-        title: "User Email Not Found",
-        description: "Cannot save source because user email is missing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+      workspaceName: currentWorkspace.workspaceName,
+    };
 
     saveSourceMutation.mutate(
       { email: user.email, newSource },
       {
-        onSuccess: (data) => {
-          toast({
-            title: "Data Source Saved Successfully!",
-            description: `${newSource.name} has been added to your data sources.`,
-          });
-          if (onSourceSaved) {
-            onSourceSaved(data || newSource);
-          }
-          navigate("/dashboard");
+        onSuccess: () => {
+          onSourceSaved?.(newSource);
+          navigate(`/admin/${workspaceID}`);
         },
         onError: (error) => {
           toast({
             title: "Failed to Save Data Source",
-            description: error?.response?.data?.message || error.message || "An error occurred while saving the data source.",
+            description: error?.message || "An error occurred.",
             variant: "destructive",
           });
         },
       }
     );
-  }
+  };
+
   // Update form state when source type changes
   const handleSourceTypeChange = (value) => {
     setSourceType(value);
@@ -543,11 +556,12 @@ export function SourceForm({ onCancel, onSourceSaved }) {
           },
           {
             value: "specific",
-            label: "Select Specific Sheets/Columns - For Excel or structured formats",
+            label:
+              "Select Specific Sheets/Columns - For Excel or structured formats",
           },
           {
             value: "query",
-            label: "Apply Row Filters - e.g., load rows with status = \"active\"",
+            label: 'Apply Row Filters - e.g., load rows with status = "active"',
           },
         ];
       case "blob":
@@ -577,7 +591,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
           },
           {
             value: "query",
-            label: "Write Custom Request - Compose full request with params/body",
+            label:
+              "Write Custom Request - Compose full request with params/body",
           },
         ];
       case "datawarehouse":
@@ -681,7 +696,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       if (!connectionString || !containerName || !fileType) {
         toast({
           title: "Missing Required Fields",
-          description: "Please provide connection string, container name, and file format.",
+          description:
+            "Please provide connection string, container name, and file format.",
           variant: "destructive",
         });
         return;
@@ -699,7 +715,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
               setIsAzureFilesLoaded(false);
               toast({
                 title: "No files found",
-                description: "No files of the selected type were found in the container.",
+                description:
+                  "No files of the selected type were found in the container.",
                 variant: "destructive",
               });
             }
@@ -709,38 +726,47 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             setIsAzureFilesLoaded(false);
             toast({
               title: "Error listing files",
-              description: error?.response?.data?.message || error.message || "Could not list files from Azure Blob Storage.",
+              description:
+                error?.response?.data?.message ||
+                error.message ||
+                "Could not list files from Azure Blob Storage.",
               variant: "destructive",
             });
           },
         }
       );
-    }
+    };
 
     const getFilesListSection = () => {
-      return <div className="mt-4">
-        <p className="text-sm font-medium text-gray-900 mb-2">Select Files:</p>
-        <div className="max-h-64 overflow-y-auto border rounded p-2 bg-gray-50">
-          {azureFiles.map((file) => (
-            <label key={file} className="flex items-center space-x-2 mb-1">
-              <input
-                type="checkbox"
-                checked={selectedTables.includes(file)}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setSelectedTables([...selectedTables, file]);
-                  } else {
-                    setSelectedTables(selectedTables.filter((f) => f !== file));
-                  }
-                }}
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <span className="text-xs text-gray-700">{file}</span>
-            </label>
-          ))}
+      return (
+        <div className="mt-4">
+          <p className="text-sm font-medium text-gray-900 mb-2">
+            Select Files:
+          </p>
+          <div className="max-h-64 overflow-y-auto border rounded p-2 bg-gray-50">
+            {azureFiles.map((file) => (
+              <label key={file} className="flex items-center space-x-2 mb-1">
+                <input
+                  type="checkbox"
+                  checked={selectedTables.includes(file)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedTables([...selectedTables, file]);
+                    } else {
+                      setSelectedTables(
+                        selectedTables.filter((f) => f !== file)
+                      );
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-xs text-gray-700">{file}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
-    }
+      );
+    };
 
     // Get query-related helpers
     const getQueryDescription = (sourceType) => {
@@ -806,7 +832,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
     // Compute filtered tables based on search query
     const filteredTables = availableTables.filter((table) =>
-      table.toLowerCase().includes(tableSearchQuery.toLowerCase()),
+      table.toLowerCase().includes(tableSearchQuery.toLowerCase())
     );
 
     // Toggle table selection
@@ -876,7 +902,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 htmlFor="select-all"
                 className="text-sm font-medium text-gray-900"
               >
-                {getDataSelectionOptions(currentSourceType)[0]?.label || "Select All Data"}
+                {getDataSelectionOptions(currentSourceType)[0]?.label ||
+                  "Select All Data"}
               </label>
             </div>
 
@@ -894,7 +921,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 htmlFor="select-specific"
                 className="text-sm font-medium text-gray-900"
               >
-                {getDataSelectionOptions(currentSourceType)[1]?.label || "Select Specific Items"}
+                {getDataSelectionOptions(currentSourceType)[1]?.label ||
+                  "Select Specific Items"}
               </label>
             </div>
 
@@ -912,7 +940,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 htmlFor="select-query"
                 className="text-sm font-medium text-gray-900"
               >
-                {getDataSelectionOptions(currentSourceType)[2]?.label || "Custom Query"}
+                {getDataSelectionOptions(currentSourceType)[2]?.label ||
+                  "Custom Query"}
               </label>
             </div>
           </div>
@@ -923,15 +952,26 @@ export function SourceForm({ onCancel, onSourceSaved }) {
               <div className="space-y-4">
                 <div className="bg-white p-4 rounded-md border border-gray-200">
                   <p className="text-sm text-gray-600">
-                    All files will be uploaded and processed. Choose your file below:
+                    All files will be uploaded and processed. Choose your file
+                    below:
                   </p>
                 </div>
 
                 {/* File Upload Component */}
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors">
                   <div className="text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      className="mx-auto h-12 w-12 text-gray-400"
+                      stroke="currentColor"
+                      fill="none"
+                      viewBox="0 0 48 48"
+                    >
+                      <path
+                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                     <div className="mt-4">
                       <label htmlFor="file-upload" className="cursor-pointer">
@@ -953,16 +993,21 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                         />
                       </label>
                       <p className="mt-1 text-xs text-gray-500">
-                        Supports CSV, Excel, JSON, Parquet, XML, TXT, PNG, JPEG, JPG, PDF files
+                        Supports CSV, Excel, JSON, Parquet, XML, TXT, PNG, JPEG,
+                        JPG, PDF files
                       </p>
                     </div>
                     {/* Show selected files */}
                     {uploadedFiles.length > 0 && (
                       <div className="mt-4 text-left">
-                        <p className="text-xs font-semibold text-gray-700 mb-1">Selected file{uploadedFiles.length > 1 ? 's' : ''}:</p>
+                        <p className="text-xs font-semibold text-gray-700 mb-1">
+                          Selected file{uploadedFiles.length > 1 ? "s" : ""}:
+                        </p>
                         <ul className="text-xs text-gray-600 space-y-1">
                           {uploadedFiles.map((file, idx) => (
-                            <li key={file.name + idx} className="truncate">{file.name}</li>
+                            <li key={file.name + idx} className="truncate">
+                              {file.name}
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -985,9 +1030,12 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             {selectionMode === "specific" && currentSourceType === "files" && (
               <div className="space-y-4">
                 <div className="bg-white p-4 rounded-md border border-gray-200">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Select Specific Files</h4>
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">
+                    Select Specific Files
+                  </h4>
                   {/* Azure Blob Storage: List files for selection */}
-                  {location === "cloud" && form.getValues("cloudProvider") === "azure" ? (
+                  {location === "cloud" &&
+                  form.getValues("cloudProvider") === "azure" ? (
                     <>
                       <button
                         type="button"
@@ -995,20 +1043,39 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                         disabled={listAzureBlobFiles.isLoading}
                         onClick={handleListFilesButtonClick}
                       >
-                        {listAzureBlobFiles.isLoading ? "Loading Files..." : "List Files from Azure Blob Storage"}
+                        {listAzureBlobFiles.isLoading
+                          ? "Loading Files..."
+                          : "List Files from Azure Blob Storage"}
                       </button>
-                      {isAzureFilesLoaded && azureFiles.length > 0 && getFilesListSection()}
+                      {isAzureFilesLoaded &&
+                        azureFiles.length > 0 &&
+                        getFilesListSection()}
                     </>
                   ) : (
                     // Fallback: original file upload logic for on-prem or non-Azure
                     <>
                       <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
                         <div className="text-center">
-                          <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          <svg
+                            className="mx-auto h-8 w-8 text-gray-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="2"
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
                           </svg>
-                          <label htmlFor="specific-file-upload" className="cursor-pointer">
-                            <span className="text-sm font-medium text-gray-900">Upload Excel or CSV file</span>
+                          <label
+                            htmlFor="specific-file-upload"
+                            className="cursor-pointer"
+                          >
+                            <span className="text-sm font-medium text-gray-900">
+                              Upload Excel or CSV file
+                            </span>
                             <input
                               id="specific-file-upload"
                               type="file"
@@ -1018,21 +1085,32 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                                 const file = e.target.files[0];
                                 if (file) {
                                   // Simulate sheet/column detection
-                                  setSelectedTables(["Sheet1", "Sheet2", "Data"]);
+                                  setSelectedTables([
+                                    "Sheet1",
+                                    "Sheet2",
+                                    "Data",
+                                  ]);
                                   setExpandedTables(["Sheet1"]);
                                 }
                               }}
                             />
                           </label>
-                          <p className="text-xs text-gray-500 mt-1">Excel or CSV files only</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            Excel or CSV files only
+                          </p>
                         </div>
                       </div>
                       {/* Sheet/Column Selection (appears after file upload) */}
                       {selectedTables.length > 0 && (
                         <div className="mt-4 space-y-3">
-                          <p className="text-sm font-medium text-gray-900">Select Sheets and Columns:</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            Select Sheets and Columns:
+                          </p>
                           {selectedTables.map((sheet, index) => (
-                            <div key={sheet} className="border border-gray-200 rounded-lg p-3 bg-white">
+                            <div
+                              key={sheet}
+                              className="border border-gray-200 rounded-lg p-3 bg-white"
+                            >
                               <div className="flex items-center justify-between mb-2">
                                 <label className="flex items-center space-x-2">
                                   <input
@@ -1040,31 +1118,47 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                                     defaultChecked
                                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                   />
-                                  <span className="text-sm font-medium text-gray-900">{sheet}</span>
+                                  <span className="text-sm font-medium text-gray-900">
+                                    {sheet}
+                                  </span>
                                 </label>
                                 <button
                                   onClick={() => {
-                                    setExpandedTables(prev =>
+                                    setExpandedTables((prev) =>
                                       prev.includes(sheet)
-                                        ? prev.filter(t => t !== sheet)
+                                        ? prev.filter((t) => t !== sheet)
                                         : [...prev, sheet]
                                     );
                                   }}
                                   className="text-blue-600 text-xs hover:text-blue-800"
                                 >
-                                  {expandedTables.includes(sheet) ? "Hide Columns" : "Show Columns"}
+                                  {expandedTables.includes(sheet)
+                                    ? "Hide Columns"
+                                    : "Show Columns"}
                                 </button>
                               </div>
                               {expandedTables.includes(sheet) && (
                                 <div className="ml-6 grid grid-cols-2 gap-2 mt-2">
-                                  {(tableColumns[sheet] || ["Column A", "Column B", "Column C", "Column D"]).map(column => (
-                                    <label key={column} className="flex items-center space-x-2">
+                                  {(
+                                    tableColumns[sheet] || [
+                                      "Column A",
+                                      "Column B",
+                                      "Column C",
+                                      "Column D",
+                                    ]
+                                  ).map((column) => (
+                                    <label
+                                      key={column}
+                                      className="flex items-center space-x-2"
+                                    >
                                       <input
                                         type="checkbox"
                                         defaultChecked
                                         className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                                       />
-                                      <span className="text-xs text-gray-700">{column}</span>
+                                      <span className="text-xs text-gray-700">
+                                        {column}
+                                      </span>
                                     </label>
                                   ))}
                                 </div>
@@ -1325,7 +1419,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                       Total {terminology.fields}:{" "}
                       {Object.values(selectedColumns).reduce(
                         (acc, cols) => acc + cols.length,
-                        0,
+                        0
                       )}
                     </span>
                   </div>
@@ -1384,8 +1478,12 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                     onClick={() => {
                       // In a real implementation, this would validate the query
                       toast({
-                        title: `${getQueryType(currentSourceType)} syntax looks good`,
-                        description: `The ${getQueryType(currentSourceType).toLowerCase()} has been validated.`,
+                        title: `${getQueryType(
+                          currentSourceType
+                        )} syntax looks good`,
+                        description: `The ${getQueryType(
+                          currentSourceType
+                        ).toLowerCase()} has been validated.`,
                       });
                     }}
                   >
@@ -1450,7 +1548,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
               <div className="space-y-1">
                 <p className="text-sm font-medium text-gray-700">Source Name</p>
                 <p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">
-                  {data.sourceName || '—'}
+                  {data.sourceName || "—"}
                 </p>
               </div>
               <div className="space-y-1">
@@ -1466,44 +1564,62 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 </p>
               </div>
               <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-700">Collection Mode</p>
+                <p className="text-sm font-medium text-gray-700">
+                  Collection Mode
+                </p>
                 <p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">
-                  {selectionMode === 'all' ? 'Select All' : selectionMode === 'specific' ? 'Select Specific Items' : 'Custom Query/Rules'}
+                  {selectionMode === "all"
+                    ? "Select All"
+                    : selectionMode === "specific"
+                    ? "Select Specific Items"
+                    : "Custom Query/Rules"}
                 </p>
               </div>
             </div>
 
             {/* Data Selection Summary */}
-            {selectionMode === 'specific' && selectedTables.length > 0 && (
+            {selectionMode === "specific" && selectedTables.length > 0 && (
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Selected Items</h4>
+                <h4 className="text-sm font-medium text-gray-700">
+                  Selected Items
+                </h4>
                 <div className="bg-white border border-gray-200 rounded-md">
                   <div className="divide-y divide-gray-200">
                     {selectedTables.map((table, index) => (
                       <div key={table} className="p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-900">{table}</span>
+                          <span className="font-medium text-gray-900">
+                            {table}
+                          </span>
                           <span className="text-xs text-gray-500">
                             {/* {getSelectedColumnCount ? getSelectedColumnCount(table) : 0} fields selected */}
                           </span>
                         </div>
-                        {selectedColumns[table] && selectedColumns[table].length > 0 && (
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-600 mb-1">Selected Fields:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {selectedColumns[table].slice(0, 8).map((column) => (
-                                <span key={column} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                                  {column}
-                                </span>
-                              ))}
-                              {selectedColumns[table].length > 8 && (
-                                <span className="text-xs text-gray-500">
-                                  +{selectedColumns[table].length - 8} more
-                                </span>
-                              )}
+                        {selectedColumns[table] &&
+                          selectedColumns[table].length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-600 mb-1">
+                                Selected Fields:
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                {selectedColumns[table]
+                                  .slice(0, 8)
+                                  .map((column) => (
+                                    <span
+                                      key={column}
+                                      className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded"
+                                    >
+                                      {column}
+                                    </span>
+                                  ))}
+                                {selectedColumns[table].length > 8 && (
+                                  <span className="text-xs text-gray-500">
+                                    +{selectedColumns[table].length - 8} more
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
                       </div>
                     ))}
                   </div>
@@ -1512,12 +1628,16 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             )}
 
             {/* Custom Query Summary */}
-            {selectionMode === 'query' && customQuery && (
+            {selectionMode === "query" && customQuery && (
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Custom Query/Rules</h4>
+                <h4 className="text-sm font-medium text-gray-700">
+                  Custom Query/Rules
+                </h4>
                 <div className="bg-white border border-gray-200 rounded-md p-3">
                   <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">
-                    {customQuery.length > 200 ? customQuery.substring(0, 200) + '...' : customQuery}
+                    {customQuery.length > 200
+                      ? customQuery.substring(0, 200) + "..."
+                      : customQuery}
                   </pre>
                 </div>
               </div>
@@ -1526,12 +1646,19 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             {/* Custom Prompt */}
             {data.customPrompt && (
               <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Custom Prompt</h4>
+                <h4 className="text-sm font-medium text-gray-700">
+                  Custom Prompt
+                </h4>
                 <div className="bg-white border border-gray-200 rounded-md p-3">
                   <p className="text-sm text-gray-700">
-                    {data.customPrompt && data.customPrompt.trim().length > 0
-                      ? data.customPrompt
-                      : <span className="italic text-gray-400">No custom prompt provided.</span>}
+                    {data.customPrompt &&
+                    data.customPrompt.trim().length > 0 ? (
+                      data.customPrompt
+                    ) : (
+                      <span className="italic text-gray-400">
+                        No custom prompt provided.
+                      </span>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1654,94 +1781,94 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-            {
-              name: "host",
-              label: "Hostname / IP",
-              placeholder: "localhost or IP address",
-            },
-            {
-              name: "port",
-              label: "Port",
-              placeholder: "1433",
-              type: "number",
-            },
-            {
-              name: "authType",
-              label: "Authentication Type",
-              type: "select",
-              placeholder: "Select authentication method",
-              options: [
-                { value: "windows", label: "Windows Authentication" },
-                { value: "sql", label: "SQL Server Authentication" },
-              ],
-            },
-            {
-              name: "username",
-              label: "Username",
-              placeholder: "Database username",
-            },
-            {
-              name: "password",
-              label: "Password",
-              placeholder: "Database password",
-              type: "password",
-            },
-            {
-              name: "dbName",
-              label: "Database Name",
-              placeholder: "Database name",
-            },
-            {
-              name: "driver",
-              label: "Driver",
-              type: "select",
-              placeholder: "Select driver type",
-              options: [
-                { value: "odbc", label: "ODBC" },
-                { value: "jdbc", label: "JDBC" },
-              ],
-            },
-          ]
+              {
+                name: "host",
+                label: "Hostname / IP",
+                placeholder: "localhost or IP address",
+              },
+              {
+                name: "port",
+                label: "Port",
+                placeholder: "1433",
+                type: "number",
+              },
+              {
+                name: "authType",
+                label: "Authentication Type",
+                type: "select",
+                placeholder: "Select authentication method",
+                options: [
+                  { value: "windows", label: "Windows Authentication" },
+                  { value: "sql", label: "SQL Server Authentication" },
+                ],
+              },
+              {
+                name: "username",
+                label: "Username",
+                placeholder: "Database username",
+              },
+              {
+                name: "password",
+                label: "Password",
+                placeholder: "Database password",
+                type: "password",
+              },
+              {
+                name: "dbName",
+                label: "Database Name",
+                placeholder: "Database name",
+              },
+              {
+                name: "driver",
+                label: "Driver",
+                type: "select",
+                placeholder: "Select driver type",
+                options: [
+                  { value: "odbc", label: "ODBC" },
+                  { value: "jdbc", label: "JDBC" },
+                ],
+              },
+            ]
           : [
-            {
-              name: "cloudProvider",
-              label: "Cloud Provider",
-              type: "select",
-              placeholder: "Select cloud provider",
-              options: [
-                { value: "azure", label: "Azure SQL" },
-                { value: "aws", label: "AWS RDS" },
-                { value: "gcp", label: "Google Cloud SQL" },
-              ],
-            },
-            {
-              name: "connectionString",
-              label: "Connection String",
-              placeholder: "Full connection string",
-              type: "textarea",
-            },
-            {
-              name: "port",
-              label: "Port",
-              placeholder: "1433",
-              type: "number",
-            },
-            {
-              name: "authType",
-              label: "Auth Type",
-              type: "select",
-              options: [
-                { value: "managed", label: "Managed Identity" },
-                { value: "sql", label: "SQL Authentication" },
-              ],
-            },
-            {
-              name: "sslRequired",
-              label: "SSL Required",
-              type: "toggle",
-              toggleLabel: "Require SSL connection",
-            },
-          ];
+              {
+                name: "cloudProvider",
+                label: "Cloud Provider",
+                type: "select",
+                placeholder: "Select cloud provider",
+                options: [
+                  { value: "azure", label: "Azure SQL" },
+                  { value: "aws", label: "AWS RDS" },
+                  { value: "gcp", label: "Google Cloud SQL" },
+                ],
+              },
+              {
+                name: "connectionString",
+                label: "Connection String",
+                placeholder: "Full connection string",
+                type: "textarea",
+              },
+              {
+                name: "port",
+                label: "Port",
+                placeholder: "1433",
+                type: "number",
+              },
+              {
+                name: "authType",
+                label: "Auth Type",
+                type: "select",
+                options: [
+                  { value: "managed", label: "Managed Identity" },
+                  { value: "sql", label: "SQL Authentication" },
+                ],
+              },
+              {
+                name: "sslRequired",
+                label: "SSL Required",
+                type: "toggle",
+                toggleLabel: "Require SSL connection",
+              },
+            ];
 
       return (
         <div className="space-y-6">
@@ -1773,69 +1900,69 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-            {
-              name: "host",
-              label: "Hostname / IP",
-              placeholder: "Oracle server hostname or IP",
-            },
-            {
-              name: "port",
-              label: "Port",
-              placeholder: "1521",
-              type: "number",
-            },
-            {
-              name: "tnsAlias",
-              label: "TNS Alias (Optional)",
-              placeholder: "TNS service name",
-            },
-            {
-              name: "authType",
-              label: "Auth Type",
-              type: "select",
-              options: [
-                { value: "userpass", label: "Username/Password" },
-                { value: "kerberos", label: "Kerberos" },
-              ],
-            },
-            {
-              name: "username",
-              label: "Username",
-              placeholder: "Oracle username",
-            },
-            {
-              name: "password",
-              label: "Password",
-              placeholder: "Oracle password",
-              type: "password",
-            },
-          ]
+              {
+                name: "host",
+                label: "Hostname / IP",
+                placeholder: "Oracle server hostname or IP",
+              },
+              {
+                name: "port",
+                label: "Port",
+                placeholder: "1521",
+                type: "number",
+              },
+              {
+                name: "tnsAlias",
+                label: "TNS Alias (Optional)",
+                placeholder: "TNS service name",
+              },
+              {
+                name: "authType",
+                label: "Auth Type",
+                type: "select",
+                options: [
+                  { value: "userpass", label: "Username/Password" },
+                  { value: "kerberos", label: "Kerberos" },
+                ],
+              },
+              {
+                name: "username",
+                label: "Username",
+                placeholder: "Oracle username",
+              },
+              {
+                name: "password",
+                label: "Password",
+                placeholder: "Oracle password",
+                type: "password",
+              },
+            ]
           : [
-            {
-              name: "cloudProvider",
-              label: "Cloud Provider",
-              type: "select",
-              options: [
-                { value: "oci", label: "Oracle Cloud Infrastructure" },
-                { value: "aws-rds", label: "AWS RDS for Oracle" },
-              ],
-            },
-            {
-              name: "connectionType",
-              label: "Connection Type",
-              value: "SSL + Wallet",
-              disabled: true,
-            },
-            {
-              name: "authType",
-              label: "Auth Type",
-              type: "select",
-              options: [
-                { value: "iam", label: "IAM" },
-                { value: "oauth", label: "OAuth" },
-              ],
-            },
-          ];
+              {
+                name: "cloudProvider",
+                label: "Cloud Provider",
+                type: "select",
+                options: [
+                  { value: "oci", label: "Oracle Cloud Infrastructure" },
+                  { value: "aws-rds", label: "AWS RDS for Oracle" },
+                ],
+              },
+              {
+                name: "connectionType",
+                label: "Connection Type",
+                value: "SSL + Wallet",
+                disabled: true,
+              },
+              {
+                name: "authType",
+                label: "Auth Type",
+                type: "select",
+                options: [
+                  { value: "iam", label: "IAM" },
+                  { value: "oauth", label: "OAuth" },
+                ],
+              },
+            ];
 
       return (
         <div className="space-y-6">
@@ -1857,72 +1984,72 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-            {
-              name: "host",
-              label: "Hostname / IP",
-              placeholder: "PostgreSQL server hostname",
-            },
-            {
-              name: "port",
-              label: "Port",
-              placeholder: "5432",
-              type: "number",
-            },
-            {
-              name: "username",
-              label: "Username",
-              placeholder: "PostgreSQL username",
-            },
-            {
-              name: "password",
-              label: "Password",
-              placeholder: "PostgreSQL password",
-              type: "password",
-            },
-            {
-              name: "dbName",
-              label: "Database Name",
-              placeholder: "Database name",
-            },
-            {
-              name: "ssl",
-              label: "SSL Connection",
-              type: "toggle",
-              toggleLabel: "Enable SSL",
-            },
-          ]
+              {
+                name: "host",
+                label: "Hostname / IP",
+                placeholder: "PostgreSQL server hostname",
+              },
+              {
+                name: "port",
+                label: "Port",
+                placeholder: "5432",
+                type: "number",
+              },
+              {
+                name: "username",
+                label: "Username",
+                placeholder: "PostgreSQL username",
+              },
+              {
+                name: "password",
+                label: "Password",
+                placeholder: "PostgreSQL password",
+                type: "password",
+              },
+              {
+                name: "dbName",
+                label: "Database Name",
+                placeholder: "Database name",
+              },
+              {
+                name: "ssl",
+                label: "SSL Connection",
+                type: "toggle",
+                toggleLabel: "Enable SSL",
+              },
+            ]
           : [
-            {
-              name: "provider",
-              label: "Provider",
-              type: "select",
-              options: [
-                { value: "aws", label: "AWS RDS" },
-                { value: "azure", label: "Azure Database" },
-                { value: "gcp", label: "Google Cloud SQL" },
-              ],
-            },
-            {
-              name: "authMethod",
-              label: "Auth Method",
-              type: "select",
-              options: [
-                { value: "iam", label: "IAM" },
-                { value: "userpass", label: "Username/Password" },
-              ],
-            },
-            {
-              name: "hostname",
-              label: "Hostname",
-              placeholder: "Cloud database hostname",
-            },
-            {
-              name: "sslRequired",
-              label: "SSL Required",
-              type: "toggle",
-              toggleLabel: "SSL is mandatory",
-            },
-          ];
+              {
+                name: "provider",
+                label: "Provider",
+                type: "select",
+                options: [
+                  { value: "aws", label: "AWS RDS" },
+                  { value: "azure", label: "Azure Database" },
+                  { value: "gcp", label: "Google Cloud SQL" },
+                ],
+              },
+              {
+                name: "authMethod",
+                label: "Auth Method",
+                type: "select",
+                options: [
+                  { value: "iam", label: "IAM" },
+                  { value: "userpass", label: "Username/Password" },
+                ],
+              },
+              {
+                name: "hostname",
+                label: "Hostname",
+                placeholder: "Cloud database hostname",
+              },
+              {
+                name: "sslRequired",
+                label: "SSL Required",
+                type: "toggle",
+                toggleLabel: "SSL is mandatory",
+              },
+            ];
 
       return (
         <div className="space-y-6">
@@ -1944,68 +2071,68 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       const fields =
         currentLocation === "on-prem"
           ? [
-            {
-              name: "host",
-              label: "Host/IP",
-              placeholder: "MongoDB server hostname",
-            },
-            {
-              name: "port",
-              label: "Port",
-              placeholder: "27017",
-              type: "number",
-            },
-            {
-              name: "bindIPs",
-              label: "Bind IPs",
-              placeholder: "Comma-separated IP addresses",
-              type: "textarea",
-            },
-            {
-              name: "authType",
-              label: "Auth Type",
-              type: "select",
-              options: [
-                { value: "scram", label: "SCRAM" },
-                { value: "x509", label: "x.509" },
-              ],
-            },
-            {
-              name: "ssl",
-              label: "SSL",
-              type: "toggle",
-              toggleLabel: "Enable SSL",
-            },
-          ]
+              {
+                name: "host",
+                label: "Host/IP",
+                placeholder: "MongoDB server hostname",
+              },
+              {
+                name: "port",
+                label: "Port",
+                placeholder: "27017",
+                type: "number",
+              },
+              {
+                name: "bindIPs",
+                label: "Bind IPs",
+                placeholder: "Comma-separated IP addresses",
+                type: "textarea",
+              },
+              {
+                name: "authType",
+                label: "Auth Type",
+                type: "select",
+                options: [
+                  { value: "scram", label: "SCRAM" },
+                  { value: "x509", label: "x.509" },
+                ],
+              },
+              {
+                name: "ssl",
+                label: "SSL",
+                type: "toggle",
+                toggleLabel: "Enable SSL",
+              },
+            ]
           : [
-            {
-              name: "provider",
-              label: "Provider",
-              type: "select",
-              options: [
-                { value: "atlas", label: "MongoDB Atlas" },
-                { value: "documentdb", label: "Amazon DocumentDB" },
-              ],
-            },
-            {
-              name: "connectionString",
-              label: "Connection String",
-              placeholder: "MongoDB connection string",
-              type: "textarea",
-            },
-            {
-              name: "sslAlwaysOn",
-              label: "SSL Always On",
-              type: "toggle",
-              toggleLabel: "SSL is always enabled",
-            },
-            {
-              name: "vpcPeering",
-              label: "VPC Peering",
-              type: "toggle",
-              toggleLabel: "Enable VPC peering",
-            },
-          ];
+              {
+                name: "provider",
+                label: "Provider",
+                type: "select",
+                options: [
+                  { value: "atlas", label: "MongoDB Atlas" },
+                  { value: "documentdb", label: "Amazon DocumentDB" },
+                ],
+              },
+              {
+                name: "connectionString",
+                label: "Connection String",
+                placeholder: "MongoDB connection string",
+                type: "textarea",
+              },
+              {
+                name: "sslAlwaysOn",
+                label: "SSL Always On",
+                type: "toggle",
+                toggleLabel: "SSL is always enabled",
+              },
+              {
+                name: "vpcPeering",
+                label: "VPC Peering",
+                type: "toggle",
+                toggleLabel: "Enable VPC peering",
+              },
+            ];
 
       return (
         <div className="space-y-6">
@@ -2025,14 +2152,16 @@ export function SourceForm({ onCancel, onSourceSaved }) {
     // Files Configuration
     if (currentSourceType === "files") {
       let fields;
-      const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+      const isAzure =
+        currentLocation === "cloud" &&
+        form.getValues("cloudProvider") === "azure";
       if (currentLocation === "on-prem") {
         fields = [
           {
             name: "filePath",
             label: "File Path",
             placeholder: "/path/to/files or \\server\\share (NFS/SMB URI)",
-            description: "Local path or network file share path"
+            description: "Local path or network file share path",
           },
           {
             name: "accessType",
@@ -2041,14 +2170,15 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             placeholder: "Select access type",
             options: [
               { value: "shared", label: "Shared" },
-              { value: "mount", label: "Mount" }
-            ]
+              { value: "mount", label: "Mount" },
+            ],
           },
           {
             name: "mountPath",
             label: "Mount Path",
             placeholder: "/mnt/data (if containerized)",
-            description: "Container mount path if using containerized deployment"
+            description:
+              "Container mount path if using containerized deployment",
           },
           {
             name: "fileFormat",
@@ -2061,9 +2191,9 @@ export function SourceForm({ onCancel, onSourceSaved }) {
               { value: "png", label: "PNG" },
               { value: "jpeg", label: "JPEG" },
               { value: "pdf", label: "PDF" },
-              { value: "jpg", label: "JPG" }
-            ]
-          }
+              { value: "jpg", label: "JPG" },
+            ],
+          },
         ];
       } else {
         // Cloud
@@ -2076,20 +2206,20 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             options: [
               { value: "s3", label: "Amazon S3" },
               { value: "azure", label: "Azure Blob Storage" },
-              { value: "gcs", label: "Google Cloud Storage" }
-            ]
+              { value: "gcs", label: "Google Cloud Storage" },
+            ],
           },
           {
             name: "containerName",
             label: "Container Name",
             placeholder: "my-data-container",
-            description: "Name of your storage container"
+            description: "Name of your storage container",
           },
           {
             name: "pathPrefix",
             label: "Path Prefix",
             placeholder: "data/files/ (optional)",
-            description: "Optional path prefix within the container"
+            description: "Optional path prefix within the container",
           },
         ];
         if (isAzure) {
@@ -2098,7 +2228,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             label: "Azure Connection String",
             type: "textarea",
             placeholder: "Paste your Azure Blob Storage connection string here",
-            description: "Full Azure Blob Storage connection string."
+            description: "Full Azure Blob Storage connection string.",
           });
         } else {
           fields.push({
@@ -2109,8 +2239,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             options: [
               { value: "iam", label: "IAM Role" },
               { value: "sas", label: "SAS Token" },
-              { value: "keyvault", label: "Azure Key Vault" }
-            ]
+              { value: "keyvault", label: "Azure Key Vault" },
+            ],
           });
         }
         fields.push({
@@ -2124,8 +2254,8 @@ export function SourceForm({ onCancel, onSourceSaved }) {
             { value: "png", label: "PNG" },
             { value: "jpeg", label: "JPEG" },
             { value: "pdf", label: "PDF" },
-            { value: "jpg", label: "JPG" }
-          ]
+            { value: "jpg", label: "JPG" },
+          ],
         });
       }
 
@@ -2140,7 +2270,9 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 onClick={handleTestConnection}
                 disabled={testAzureBlobConnection.isLoading}
               >
-                {testAzureBlobConnection.isLoading ? "Testing..." : "Test Connection"}
+                {testAzureBlobConnection.isLoading
+                  ? "Testing..."
+                  : "Test Connection"}
               </button>
             </div>
           );
@@ -2151,7 +2283,9 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       return (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-medium text-gray-900 mb-2">Files Configuration</h3>
+            <h3 className="font-medium text-gray-900 mb-2">
+              Files Configuration
+            </h3>
             <p className="text-sm text-gray-600">
               Configure access to your file storage system
             </p>
@@ -2164,14 +2298,17 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       function handleTestConnection() {
         const currentSourceType = form.getValues("sourceType");
         const currentLocation = form.getValues("location");
-        const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+        const isAzure =
+          currentLocation === "cloud" &&
+          form.getValues("cloudProvider") === "azure";
         if (isAzure && currentSourceType === "files") {
           const connectionString = form.getValues("connectionString");
           const containerName = form.getValues("containerName");
           if (!connectionString || !containerName) {
             toast({
               title: "Missing Required Fields",
-              description: "Please provide both Azure Connection String and Container Name.",
+              description:
+                "Please provide both Azure Connection String and Container Name.",
               variant: "destructive",
             });
             return;
@@ -2183,13 +2320,17 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                 if (data.success) {
                   toast({
                     title: "Connection Successful",
-                    description: data.message || "Connection to Azure Blob Storage successful!",
+                    description:
+                      data.message ||
+                      "Connection to Azure Blob Storage successful!",
                     variant: "success",
                   });
                 } else {
                   toast({
                     title: "Connection Failed",
-                    description: data.message || "Could not connect to Azure Blob Storage.",
+                    description:
+                      data.message ||
+                      "Could not connect to Azure Blob Storage.",
                     variant: "destructive",
                   });
                 }
@@ -2197,7 +2338,10 @@ export function SourceForm({ onCancel, onSourceSaved }) {
               onError: (error) => {
                 toast({
                   title: "Connection Failed",
-                  description: error?.response?.data?.message || error.message || "Could not connect to Azure Blob Storage.",
+                  description:
+                    error?.response?.data?.message ||
+                    error.message ||
+                    "Could not connect to Azure Blob Storage.",
                   variant: "destructive",
                 });
               },
@@ -2209,86 +2353,90 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
     // REST API Configuration
     if (currentSourceType === "rest") {
-      const fields = currentLocation === "on-prem"
-        ? [
-          {
-            name: "apiUrl",
-            label: "API URL",
-            placeholder: "https://api.company.com/v1",
-            description: "The base URL for your REST API"
-          },
-          {
-            name: "authMethod",
-            label: "Auth Method",
-            type: "select",
-            placeholder: "Select authentication method",
-            options: [
-              { value: "apikey", label: "API Key" },
-              { value: "basic", label: "Basic Auth" },
-              { value: "oauth2", label: "OAuth2" }
+      const fields =
+        currentLocation === "on-prem"
+          ? [
+              {
+                name: "apiUrl",
+                label: "API URL",
+                placeholder: "https://api.company.com/v1",
+                description: "The base URL for your REST API",
+              },
+              {
+                name: "authMethod",
+                label: "Auth Method",
+                type: "select",
+                placeholder: "Select authentication method",
+                options: [
+                  { value: "apikey", label: "API Key" },
+                  { value: "basic", label: "Basic Auth" },
+                  { value: "oauth2", label: "OAuth2" },
+                ],
+              },
+              {
+                name: "vpnRequired",
+                label: "VPN Required",
+                type: "toggle",
+                toggleLabel: "VPN connection required",
+              },
+              {
+                name: "corsNotes",
+                label: "CORS/Internal Access Notes",
+                type: "textarea",
+                placeholder:
+                  "Notes about CORS configuration or internal access requirements",
+                description: "Optional notes about network access requirements",
+              },
             ]
-          },
-          {
-            name: "vpnRequired",
-            label: "VPN Required",
-            type: "toggle",
-            toggleLabel: "VPN connection required"
-          },
-          {
-            name: "corsNotes",
-            label: "CORS/Internal Access Notes",
-            type: "textarea",
-            placeholder: "Notes about CORS configuration or internal access requirements",
-            description: "Optional notes about network access requirements"
-          }
-        ]
-        : [
-          {
-            name: "apiUrl",
-            label: "API URL",
-            placeholder: "https://api.service.com/v1",
-            description: "The base URL for your cloud REST API"
-          },
-          {
-            name: "authMethod",
-            label: "Auth Method",
-            type: "select",
-            placeholder: "Select authentication method",
-            options: [
-              { value: "oauth2", label: "OAuth2" },
-              { value: "jwt", label: "JWT" },
-              { value: "apikey", label: "API Key" }
-            ]
-          },
-          {
-            name: "rateLimiting",
-            label: "Rate Limiting",
-            placeholder: "Requests per minute (optional)",
-            type: "number",
-            description: "Optional rate limiting configuration"
-          },
-          {
-            name: "corsEnabled",
-            label: "CORS Always Enforced",
-            type: "toggle",
-            toggleLabel: "CORS is always enforced",
-            defaultValue: true,
-            disabled: true
-          },
-          {
-            name: "httpsOnly",
-            label: "HTTPS Mandatory",
-            type: "toggle",
-            toggleLabel: "HTTPS is mandatory",
-            defaultValue: true,
-            disabled: true
-          }
-        ];
+          : [
+              {
+                name: "apiUrl",
+                label: "API URL",
+                placeholder: "https://api.service.com/v1",
+                description: "The base URL for your cloud REST API",
+              },
+              {
+                name: "authMethod",
+                label: "Auth Method",
+                type: "select",
+                placeholder: "Select authentication method",
+                options: [
+                  { value: "oauth2", label: "OAuth2" },
+                  { value: "jwt", label: "JWT" },
+                  { value: "apikey", label: "API Key" },
+                ],
+              },
+              {
+                name: "rateLimiting",
+                label: "Rate Limiting",
+                placeholder: "Requests per minute (optional)",
+                type: "number",
+                description: "Optional rate limiting configuration",
+              },
+              {
+                name: "corsEnabled",
+                label: "CORS Always Enforced",
+                type: "toggle",
+                toggleLabel: "CORS is always enforced",
+                defaultValue: true,
+                disabled: true,
+              },
+              {
+                name: "httpsOnly",
+                label: "HTTPS Mandatory",
+                type: "toggle",
+                toggleLabel: "HTTPS is mandatory",
+                defaultValue: true,
+                disabled: true,
+              },
+            ];
 
       return (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-medium text-gray-900 mb-2">REST API Configuration</h3>
+            <h3 className="font-medium text-gray-900 mb-2">
+              REST API Configuration
+            </h3>
             <p className="text-sm text-gray-600">
               {currentLocation === "on-prem"
                 ? "Configure connection to your on-premises REST API with custom network settings"
@@ -2311,14 +2459,14 @@ export function SourceForm({ onCancel, onSourceSaved }) {
           options: [
             { value: "aws", label: "Amazon S3" },
             { value: "azure", label: "Azure Blob" },
-            { value: "gcp", label: "Google Cloud Storage" }
-          ]
+            { value: "gcp", label: "Google Cloud Storage" },
+          ],
         },
         {
           name: "bucketName",
           label: "Bucket/Container Name",
           placeholder: "my-data-bucket",
-          description: "Name of your storage bucket or container"
+          description: "Name of your storage bucket or container",
         },
         {
           name: "accessMethod",
@@ -2328,42 +2476,45 @@ export function SourceForm({ onCancel, onSourceSaved }) {
           options: [
             { value: "accesskey", label: "Access Key" },
             { value: "sas", label: "SAS Token" },
-            { value: "iam", label: "IAM Role" }
-          ]
+            { value: "iam", label: "IAM Role" },
+          ],
         },
         {
           name: "endpoint",
           label: "Endpoint Override",
           placeholder: "Optional custom endpoint URL",
-          description: "Override default endpoint (optional)"
+          description: "Override default endpoint (optional)",
         },
         {
           name: "encryptionAtRest",
           label: "Encryption at Rest",
           type: "toggle",
-          toggleLabel: "Enable encryption at rest"
+          toggleLabel: "Enable encryption at rest",
         },
         {
           name: "encryptionInTransit",
           label: "Encryption in Transit",
           type: "toggle",
-          toggleLabel: "Enable encryption in transit"
+          toggleLabel: "Enable encryption in transit",
         },
         {
           name: "httpsOnly",
           label: "HTTPS Only Protocol",
           type: "toggle",
           toggleLabel: "HTTPS protocol only",
-          defaultValue: true
-        }
+          defaultValue: true,
+        },
       ];
 
       return (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-medium text-gray-900 mb-2">Blob Storage Configuration</h3>
+            <h3 className="font-medium text-gray-900 mb-2">
+              Blob Storage Configuration
+            </h3>
             <p className="text-sm text-gray-600">
-              Configure connection to your cloud blob storage with security options
+              Configure connection to your cloud blob storage with security
+              options
             </p>
           </div>
           {renderCommonFields(fields)}
@@ -2373,109 +2524,114 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
     // Data Warehouse Configuration
     if (currentSourceType === "datawarehouse") {
-      const fields = currentLocation === "on-prem"
-        ? [
-          {
-            name: "warehouseType",
-            label: "Data Warehouse Type",
-            type: "select",
-            placeholder: "Select warehouse type",
-            options: [
-              { value: "teradata", label: "Teradata" },
-              { value: "netezza", label: "Netezza" },
-              { value: "vertica", label: "Vertica" }
+      const fields =
+        currentLocation === "on-prem"
+          ? [
+              {
+                name: "warehouseType",
+                label: "Data Warehouse Type",
+                type: "select",
+                placeholder: "Select warehouse type",
+                options: [
+                  { value: "teradata", label: "Teradata" },
+                  { value: "netezza", label: "Netezza" },
+                  { value: "vertica", label: "Vertica" },
+                ],
+              },
+              {
+                name: "host",
+                label: "Host",
+                placeholder: "warehouse.company.com",
+                description: "Data warehouse server hostname or IP",
+              },
+              {
+                name: "port",
+                label: "Port",
+                type: "number",
+                placeholder: "Default port for selected warehouse type",
+              },
+              {
+                name: "connectionString",
+                label: "JDBC/ODBC Connection String",
+                type: "textarea",
+                placeholder: "Full connection string with driver details",
+                description:
+                  "Complete connection string including driver information",
+              },
+              {
+                name: "authMethod",
+                label: "Auth Method",
+                type: "select",
+                placeholder: "Select authentication method",
+                options: [
+                  { value: "userpass", label: "Username/Password" },
+                  { value: "kerberos", label: "Kerberos" },
+                  { value: "ldap", label: "LDAP" },
+                ],
+              },
             ]
-          },
-          {
-            name: "host",
-            label: "Host",
-            placeholder: "warehouse.company.com",
-            description: "Data warehouse server hostname or IP"
-          },
-          {
-            name: "port",
-            label: "Port",
-            type: "number",
-            placeholder: "Default port for selected warehouse type"
-          },
-          {
-            name: "connectionString",
-            label: "JDBC/ODBC Connection String",
-            type: "textarea",
-            placeholder: "Full connection string with driver details",
-            description: "Complete connection string including driver information"
-          },
-          {
-            name: "authMethod",
-            label: "Auth Method",
-            type: "select",
-            placeholder: "Select authentication method",
-            options: [
-              { value: "userpass", label: "Username/Password" },
-              { value: "kerberos", label: "Kerberos" },
-              { value: "ldap", label: "LDAP" }
-            ]
-          }
-        ]
-        : [
-          {
-            name: "provider",
-            label: "Cloud Provider",
-            type: "select",
-            placeholder: "Select cloud data warehouse",
-            options: [
-              { value: "snowflake", label: "Snowflake" },
-              { value: "redshift", label: "Amazon Redshift" },
-              { value: "bigquery", label: "Google BigQuery" },
-              { value: "synapse", label: "Azure Synapse" }
-            ]
-          },
-          {
-            name: "authMethod",
-            label: "Auth Method",
-            type: "select",
-            placeholder: "Select authentication method",
-            options: [
-              { value: "iam", label: "IAM" },
-              { value: "keypair", label: "Key Pair" },
-              { value: "oauth", label: "OAuth" }
-            ]
-          },
-          {
-            name: "accountId",
-            label: "Account ID / Project ID",
-            placeholder: "Your account or project identifier",
-            description: "Account ID for Snowflake, Project ID for BigQuery, etc."
-          },
-          {
-            name: "database",
-            label: "Database Name",
-            placeholder: "Database name"
-          },
-          {
-            name: "schema",
-            label: "Schema Name",
-            placeholder: "Schema name"
-          },
-          {
-            name: "sslRequired",
-            label: "SSL Required",
-            type: "toggle",
-            toggleLabel: "SSL connection required",
-            defaultValue: true
-          },
-          {
-            name: "vpcPeering",
-            label: "VPC Peering",
-            type: "toggle",
-            toggleLabel: "Enable VPC peering"
-          }
-        ];
+          : [
+              {
+                name: "provider",
+                label: "Cloud Provider",
+                type: "select",
+                placeholder: "Select cloud data warehouse",
+                options: [
+                  { value: "snowflake", label: "Snowflake" },
+                  { value: "redshift", label: "Amazon Redshift" },
+                  { value: "bigquery", label: "Google BigQuery" },
+                  { value: "synapse", label: "Azure Synapse" },
+                ],
+              },
+              {
+                name: "authMethod",
+                label: "Auth Method",
+                type: "select",
+                placeholder: "Select authentication method",
+                options: [
+                  { value: "iam", label: "IAM" },
+                  { value: "keypair", label: "Key Pair" },
+                  { value: "oauth", label: "OAuth" },
+                ],
+              },
+              {
+                name: "accountId",
+                label: "Account ID / Project ID",
+                placeholder: "Your account or project identifier",
+                description:
+                  "Account ID for Snowflake, Project ID for BigQuery, etc.",
+              },
+              {
+                name: "database",
+                label: "Database Name",
+                placeholder: "Database name",
+              },
+              {
+                name: "schema",
+                label: "Schema Name",
+                placeholder: "Schema name",
+              },
+              {
+                name: "sslRequired",
+                label: "SSL Required",
+                type: "toggle",
+                toggleLabel: "SSL connection required",
+                defaultValue: true,
+              },
+              {
+                name: "vpcPeering",
+                label: "VPC Peering",
+                type: "toggle",
+                toggleLabel: "Enable VPC peering",
+              },
+            ];
 
       return (
         <div className="space-y-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <h3 className="font-medium text-gray-900 mb-2">Data Warehouse Configuration</h3>
+            <h3 className="font-medium text-gray-900 mb-2">
+              Data Warehouse Configuration
+            </h3>
             <p className="text-sm text-gray-600">
               {currentLocation === "on-prem"
                 ? "Configure connection to your on-premises data warehouse"
@@ -2547,7 +2703,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                     </FormLabel>
                     <Select
                       onValueChange={handleSourceTypeChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger
@@ -2705,17 +2861,19 @@ export function SourceForm({ onCancel, onSourceSaved }) {
           {[1, 2, 3, 4].map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${stepNumber <= step
-                  ? "bg-[#2196F3] text-white"
-                  : "bg-gray-200 text-gray-500"
-                  }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                  stepNumber <= step
+                    ? "bg-[#2196F3] text-white"
+                    : "bg-gray-200 text-gray-500"
+                }`}
               >
                 {stepNumber}
               </div>
               {stepNumber < 4 && (
                 <ChevronRight
-                  className={`h-4 w-4 mx-2 ${stepNumber < step ? "text-[#2196F3]" : "text-gray-300"
-                    }`}
+                  className={`h-4 w-4 mx-2 ${
+                    stepNumber < step ? "text-[#2196F3]" : "text-gray-300"
+                  }`}
                 />
               )}
             </div>
@@ -2725,9 +2883,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
       <CardContent className="p-6">
         <Form {...form}>
-          <form className="space-y-6">
-            {renderStep()}
-          </form>
+          <form className="space-y-6">{renderStep()}</form>
         </Form>
       </CardContent>
 
@@ -2754,7 +2910,6 @@ export function SourceForm({ onCancel, onSourceSaved }) {
         </div>
 
         <div className="flex space-x-3">
-
           {step < 4 ? (
             <Button
               type="button"
