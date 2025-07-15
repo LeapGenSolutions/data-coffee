@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { useSelector } from 'react-redux';
 import { 
   Search, 
   Plus, 
@@ -167,15 +168,45 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
     );
   };
 
+  // Workspace dropdown state (Redux)
+  const workspaces = useSelector((state) => state.workspaces.workspaces) || [];
+  const [selectedWorkspace, setSelectedWorkspace] = useState(() => workspaces[0]?.id || "");
+  // If workspaces change and selectedWorkspace is not in the list, update it
+  React.useEffect(() => {
+    if (workspaces.length > 0 && !workspaces.find(ws => ws.id === selectedWorkspace)) {
+      setSelectedWorkspace(workspaces[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaces]);
+
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Data Sources</h3>
-          <p className="text-sm text-gray-600">
-            Manage your connected data sources and brewing configurations
-          </p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Data Sources</h3>
+            <p className="text-sm text-gray-600">
+              Manage your connected data sources and brewing configurations
+            </p>
+          </div>
+          {/* Workspace Dropdown */}
+          <div>
+            <select
+              className="border border-gray-300 rounded-lg px-3 py-2 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+              value={selectedWorkspace}
+              onChange={e => setSelectedWorkspace(e.target.value)}
+              disabled={workspaces.length === 0}
+            >
+              {workspaces.length === 0 ? (
+                <option value="" disabled>No workspaces found</option>
+              ) : (
+                workspaces.map(ws => (
+                  <option key={ws.id} value={ws.id}>{ws.workspaceName || ws.name || ws.id}</option>
+                ))
+              )}
+            </select>
+          </div>
         </div>
         <Button 
           onClick={onAddSource}

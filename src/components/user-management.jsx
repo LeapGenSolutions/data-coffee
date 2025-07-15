@@ -91,12 +91,12 @@ function UserManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
-  const { workspaceID } = useParams();
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const currentWorkspace = workspaces.find(ws => ws.id === workspaceID);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(() => workspaces[0]?.id || "");
+  const currentWorkspace = workspaces.find(ws => ws.id === selectedWorkspaceId);
 
-  // Fetch available sources for the current workspace
-  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(workspaceID);
+  // Fetch available sources for the selected workspace
+  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspaceId);
   console.log(availableSources);
 
   // Sample user data with medical context
@@ -426,29 +426,6 @@ function UserManagement() {
     });
   };
 
-  const aiPrompts = [
-    {
-      title: "Enhance Data Quality",
-      description: "Improve data validation and cleansing processes to assure high-quality analytics.",
-      content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
-    },
-    {
-      title: "Automate Anonymization",
-      description: "Implement automated patient data anonymization using advanced AI techniques.",
-      content: "Implement automated patient data anonymization using advanced AI techniques for privacy compliance.",
-    },
-    {
-      title: "Real-time Processing",
-      description: "Enable real-time data processing for critical patient and clinical workflows.",
-      content: "Enable real-time data processing for critical patient and clinical workflows.",
-    },
-    {
-      title: "Cross-System Integration",
-      description: "Create seamless integration between EMR systems, labs, and analytics platforms.",
-      content: "Create seamless integration between EMR systems, labs, and analytics platforms for unified data access.",
-    },
-  ];
-
   // Add mock prompt history and suggested prompt for demonstration
   const getPipelinePrompts = (pipeline) => {
     // In a real app, fetch from backend or pipeline object
@@ -565,11 +542,24 @@ function UserManagement() {
       {/* Main Content */}
       <div className="space-y-4">
         {/* Section Title and Controls */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-semibold text-gray-900">
             Data Pipelines
           </h2>
-
+          {/* Workspace Dropdown */}
+          <div className="flex items-center gap-2">
+            <label htmlFor="workspace-select" className="text-sm font-medium text-gray-700">Workspace:</label>
+            <select
+              id="workspace-select"
+              className="border border-gray-300 rounded px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedWorkspaceId}
+              onChange={e => setSelectedWorkspaceId(e.target.value)}
+            >
+              {workspaces.map(ws => (
+                <option key={ws.id} value={ws.id}>{ws.workspaceName || ws.name || ws.id}</option>
+              ))}
+            </select>
+          </div>
           <Dialog
             open={showCreateUserDialog}
             onOpenChange={(open) => {

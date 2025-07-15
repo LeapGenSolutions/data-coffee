@@ -12,10 +12,7 @@ import {
 } from "lucide-react";
 
 import { useSelector } from "react-redux";
-import { useState, useEffect } from "react";
-import WorkspaceSubSidebar from "./WorkspaceSubSidebar";
 import { useLocation as useWouterLocation } from "wouter";
-import { navigateToWorkspace } from "./utils/navigateToWorkspace";
 import SidebarNav from "./SidebarNav";
 
 const navigationBase = [
@@ -31,23 +28,6 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
   const [, wouterNavigate] = useWouterLocation();
   const user = useSelector((state) => state.me.me);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const [showSubSidebar, setShowSubSidebar] = useState(false);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(null);
-
-  useEffect(() => {
-    if (showSubSidebar && workspaces && workspaces.length > 0) {
-      setSelectedWorkspaceId((prev) => {
-        const wsId = workspaces[0].id || workspaces[0]._id;
-        if (!prev) {
-          navigateToWorkspace(wsId, location, wouterNavigate);
-        }
-        return prev || wsId;
-      });
-    }
-    if (!showSubSidebar) {
-      setSelectedWorkspaceId(null);
-    }
-  }, [showSubSidebar, workspaces, location, wouterNavigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
@@ -59,17 +39,6 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
     if (!user || !user.roles) return false;
     return user.roles.includes(item.role);
   });
-
-  useEffect(() => {
-    const isAdmin = location.match("/admin") || location === "/admin-panel";
-    const isUserManagement = location.match("/user-management") || location === "/user";
-    setShowSubSidebar(isAdmin || isUserManagement);
-  }, [location]);
-
-  function handleWorkspaceSelect(wsId) {
-    setSelectedWorkspaceId(wsId);
-    navigateToWorkspace(wsId, location, wouterNavigate);
-  }
 
   return (
     <>
@@ -126,15 +95,6 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
             </div>
           </div>
         </div>
-
-        {/* Sub-sidebar for Admin Panel or User Management */}
-        {showSubSidebar && (
-          <WorkspaceSubSidebar
-            workspaces={workspaces}
-            selectedWorkspaceId={selectedWorkspaceId}
-            setSelectedWorkspaceId={handleWorkspaceSelect}
-          />
-        )}
       </div>
     </>
   );
