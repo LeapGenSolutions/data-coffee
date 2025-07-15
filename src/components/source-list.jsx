@@ -49,10 +49,12 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
 
   // Filter sources based on search term
   const filteredSources = useMemo(() => {
-    return sources.filter(source =>
-      source.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      source.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      source.status.toLowerCase().includes(searchTerm.toLowerCase())
+    const term = searchTerm.toLowerCase();
+    return sources.filter(
+      (source) =>
+        source.name.toLowerCase().includes(term) ||
+        source.type.toLowerCase().includes(term) ||
+        source.status.toLowerCase().includes(term)
     );
   }, [sources, searchTerm]);
 
@@ -97,17 +99,6 @@ export default function SourceList({ sources = [], onAddSource, onEditSource, on
       setSelectedSources(paginatedSources.map(source => source.id));
     } else {
       setSelectedSources([]);
-    }
-  };
-
-  const handleEdit = (source) => {
-    if (onEditSource) {
-      onEditSource(source);
-    } else {
-      toast({
-        title: "Edit Source",
-        description: `Opening edit form for ${source.name}`,
-      });
     }
   };
 
@@ -301,7 +292,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(source)} className="text-gray-700 hover:bg-gray-100">
+                          <DropdownMenuItem onClick={() => onEditSource(source)} className="text-gray-700 hover:bg-gray-100">
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>

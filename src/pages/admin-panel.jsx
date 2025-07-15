@@ -5,10 +5,11 @@ import { SourceForm } from "../components/source-form";
 import SourceList from "../components/source-list";
 import { ReportGrid } from "../components/report-grid";
 import DashboardLayout from "../layouts/dashboard-layout";
-import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
+import { useLocation } from "wouter";
+
 
 export default function AdminPanel() {
-  const [showSourceForm, setShowSourceForm] = useState(false);
+  const [location, setLocation] = useLocation();
   const [sources, setSources] = useState([
     {
       id: 1,
@@ -30,20 +31,30 @@ export default function AdminPanel() {
     }
   ]);
 
-  const handleSourceSaved = (newSource) => {
-    console.log("AdminPanel: handleSourceSaved called with:", newSource);
-    setSources(prevSources => {
-      const updated = [...prevSources, newSource];
-      console.log("AdminPanel: Updated sources list:", updated);
-      return updated;
-    });
-  };
+  const isAdd = location === "/admin/source";
+  const isEdit = location.startsWith("/admin/source/edit/");
+  const editingId = isEdit ? location.split("/").pop() : null;
 
-  const handleEditSource = (source) => {
-    // For now, just show the edit form with pre-populated data
-    // In a full implementation, you'd pass the source data to the form
-    console.log("Editing source:", source);
-    setShowSourceForm(true);
+  const editingSource = isEdit
+  ? sources.find((s) => String(s.id) === editingId)
+  : null;
+
+  const handleSourceSaved = (savedSource) => {
+  setSources((prev) => {
+    const index = prev.findIndex(
+      (s) => String(s.id) === String(savedSource.id)
+    );
+
+    if (index !== -1) {
+      const updated = [...prev];
+      updated[index] = savedSource;
+      return updated;
+    } else {
+      return [...prev, savedSource];
+    }
+  });
+
+    setLocation("/admin");
   };
 
   const handleDeleteSource = (sourceId) => {
@@ -79,22 +90,21 @@ export default function AdminPanel() {
             Manage system settings and users here. Configure data sources and authentication methods.
           </p>
           
-          {showSourceForm ? (
-            <ErrorBoundary>
-              <SourceForm
-                onComplete={() => setShowSourceForm(false)}
-                onCancel={() => setShowSourceForm(false)}
-                onSourceSaved={handleSourceSaved}
-              />
-            </ErrorBoundary>
-          ) : (
-            <SourceList 
-              sources={sources}
-              onAddSource={() => setShowSourceForm(true)}
-              onEditSource={handleEditSource}
-              onDeleteSource={handleDeleteSource}
+          {isAdd || isEdit ? (
+            <SourceForm
+              initialSource={editingSource}
+              onSourceSaved={handleSourceSaved}
+              onCancel={() => setLocation("/admin")}
             />
-          )}
+          ) : (
+            <SourceList
+            sources={sources}
+            onAddSource={() => setLocation("/admin/source")}
+            onEditSource={(source) => setLocation(`/admin/source/edit/${source.id}`)}
+            onDeleteSource={handleDeleteSource}
+            />
+        )}
+
         </TabsContent>
         
         <TabsContent value="report">

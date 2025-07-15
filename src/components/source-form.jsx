@@ -42,7 +42,6 @@ import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { useSaveSource } from "../hooks/useSaveSource";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
-import { useParams } from "wouter";
 
 // Define basic schema and schemas for each source type and location
 const baseSchema = z.object({
@@ -198,19 +197,18 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ onCancel, onSourceSaved }) {
+export function SourceForm({ onCancel, onSourceSaved, initialSource }) {
   // Handler for Save Source button
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
   const testAzureBlobConnection = useTestAzureBlobConnection();
   const listAzureBlobFiles = useListAzureBlobFiles();
-  const { workspaceID } = useParams();
 
   // Workspace dropdown state
   const user = useSelector((state) => state.me.me);
-  const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const currentWorkspace = workspaces.find(ws => ws.id === workspaceID);
+  // const workspaces = useSelector((state) => state.workspaces.workspaces);
+  // const currentWorkspace = workspaces.find(ws => ws.id === workspaceID);
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -243,6 +241,26 @@ export function SourceForm({ onCancel, onSourceSaved }) {
     }
     // eslint-disable-next-line
   }, [watchSourceType, watchLocation]);
+
+  useEffect(() => {
+    if (initialSource) {
+      form.reset({
+        id: initialSource.id,
+        createdAt: initialSource.createdAt,
+        sourceName: initialSource.name || "",
+        sourceType: initialSource.type || "",
+        location: initialSource.location || "",
+        authType: initialSource.authType || "",
+        customPrompt: initialSource.customPrompt || "",
+        ...initialSource.configuration,
+        step: 1,
+      });
+      setStep(1);
+    } else {
+      form.reset({ id: "", createdAt: "" });
+      setStep(1);
+    }
+  }, [initialSource, form]);
 
   // Data selection state
   const [selectionMode, setSelectionMode] = useState("all");
@@ -378,56 +396,45 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
     // Create a new source object with all the form data
     const newSource = {
-      id: Date.now(),
+      id: initialSource?.id || currentData.id || `source-${Date.now()}`,
       name: currentData.sourceName || "Untitled Source",
       type: currentData.sourceType || "unknown",
-      location: location || currentData.location || "on-prem",
+      location: currentData.location || "on-prem",
+      authType: currentData.authType || "",
       customPrompt: currentData.customPrompt || "",
-      dataSelectionMode: selectionMode || "all",
-      selectedTables: selectedTables || [],
-      selectedColumns: selectedColumns || [],
-      customQuery: customQuery || "",
+      dataSelectionMode: currentData.dataSelectionMode || "all",
+      selectedTables: currentData.selectedTables || [],
+      selectedColumns: currentData.selectedColumns || [],
+      customQuery: currentData.customQuery || "",
       configuration: currentData,
       status: "Active",
       lastSync: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      workspaceId: currentWorkspace.id,
-      workspaceName: currentWorkspace.workspaceName
-    };    
-
-    if (!user || !user.email) {
-      toast({
-        title: "User Email Not Found",
-        description: "Cannot save source because user email is missing.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+      createdAt:
+        initialSource?.createdAt ||
+        currentData.createdAt ||
+        new Date().toISOString(),
+      // workspaceId: currentWorkspace.id,
+      // workspaceName: currentWorkspace.workspaceName,
+    };
 
     saveSourceMutation.mutate(
       { email: user.email, newSource },
       {
-        onSuccess: (data) => {
-          toast({
-            title: "Data Source Saved Successfully!",
-            description: `${newSource.name} has been added to your data sources.`,
-          });
-          if (onSourceSaved) {
-            onSourceSaved(data || newSource);
-          }
-          navigate("/dashboard");
+        onSuccess: () => {
+          onSourceSaved?.(newSource);
+          navigate(`/admin`);
         },
         onError: (error) => {
           toast({
             title: "Failed to Save Data Source",
-            description: error?.response?.data?.message || error.message || "An error occurred while saving the data source.",
+            description: error?.message || "An error occurred.",
             variant: "destructive",
           });
         },
       }
     );
-  }
+  };
+  
   // Update form state when source type changes
   const handleSourceTypeChange = (value) => {
     setSourceType(value);
@@ -2547,7 +2554,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
                     </FormLabel>
                     <Select
                       onValueChange={handleSourceTypeChange}
-                      defaultValue={field.value}
+                      value={field.value}
                     >
                       <FormControl>
                         <SelectTrigger
