@@ -30,10 +30,10 @@ export default function DashboardLayout({ children }) {
   }, []);
 
   return (
-    <div className="h-screen flex overflow-hidden bg-white">
+    <div className="dashboard-layout bg-white">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="dashboard-content">
         {isMobile && (
           <div className="bg-white border-b border-gray-200 p-4 lg:hidden">
             <button
@@ -134,7 +134,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Main Content */}
-        <main className="overflow-y-auto p-6 bg-gray-50 flex flex-col items-start justify-start min-h-0">
+        <main className="dashboard-main p-6 bg-gray-50">
           {children}
         </main>
       </div>

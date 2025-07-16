@@ -2,6 +2,109 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fix scrolling issue - prevent extra space */
+html, body, #root {
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dashboard layout height constraints */
+.dashboard-layout {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+.dashboard-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-main {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Modal and Dialog scrolling fixes */
+[data-radix-dialog-content],
+[data-radix-sheet-content],
+[data-radix-drawer-content] {
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+
+/* Dialog content scrolling */
+.fixed.left-\[50\%\].top-\[50\%\].z-50 {
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+
+/* Sheet content scrolling */
+.fixed.inset-y-0.right-0.h-full {
+  overflow-y: auto !important;
+}
+
+/* Drawer content scrolling */
+.fixed.inset-x-0.bottom-0.z-50 {
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+}
+
+/* Chatbot widget scrolling */
+.fixed.z-50.bottom-24.right-6 {
+  max-height: 80vh !important;
+}
+
+/* Workspace sub-sidebar scrolling */
+.fixed.inset-y-0.left-64.z-40 {
+  overflow-y: auto !important;
+}
+
+/* Source form scrolling areas */
+.max-h-64.overflow-y-auto,
+.max-h-96.overflow-y-auto {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+/* Table scrolling */
+.relative.w-full.overflow-auto {
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+
+/* Command component scrolling */
+.max-h-\[300px\].overflow-y-auto {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+/* Context menu scrolling */
+.z-50.max-h-\[--radix-context-menu-content-available-height\] {
+  max-height: 60vh !important;
+  overflow-y: auto !important;
+}
+
+/* Toast container */
+.fixed.top-0.z-\[100\].flex.max-h-screen {
+  max-height: 100vh !important;
+  overflow: hidden !important;
+}
+
+/* Sidebar content scrolling */
+.flex.min-h-0.flex-1.flex-col.gap-2.overflow-auto {
+  overflow-y: auto !important;
+  max-height: calc(100vh - 200px) !important;
+}
+
 /* Force white background for all input fields */
 input,
 textarea,

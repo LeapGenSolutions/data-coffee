@@ -575,7 +575,7 @@ function UserManagement() {
                 Create Pipeline
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] bg-white max-h-[90vh] overflow-y-auto">
+            <DialogContent className="sm:max-w-[600px] bg-white max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-gray-900 text-center">
                   {currentStep === 1
