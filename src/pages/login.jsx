@@ -20,7 +20,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+    <div className="h-screen relative overflow-hidden flex items-center justify-center p-4">
       {/* Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-cyan-50 to-indigo-100">
         {/* Floating background elements */}
