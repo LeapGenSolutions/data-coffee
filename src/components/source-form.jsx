@@ -37,6 +37,7 @@ import {
   Globe,
   CheckCircle,
 } from "lucide-react";
+import ToggleButton from "./ui/toggle-button";
 import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { useSaveSource } from "../hooks/useSaveSource";
@@ -203,6 +204,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
+  const [sourceStatus, setSourceStatus] = useState("Active");
   const testAzureBlobConnection = useTestAzureBlobConnection();
   const listAzureBlobFiles = useListAzureBlobFiles();
   const { workspaceID } = useParams();
@@ -388,7 +390,7 @@ export function SourceForm({ onCancel, onSourceSaved }) {
       selectedColumns: selectedColumns || [],
       customQuery: customQuery || "",
       configuration: currentData,
-      status: "Active",
+      status: sourceStatus,
       lastSync: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       workspaceId: currentWorkspace.id,
@@ -2694,11 +2696,31 @@ export function SourceForm({ onCancel, onSourceSaved }) {
 
   return (
     <Card className="w-full max-w-6xl mx-auto bg-white border-gray-200 shadow-lg">
-      <CardHeader className="bg-gradient-to-r from-blue-50 to-white border-b border-gray-200">
+      <CardHeader className="relative bg-gradient-to-r from-blue-50 to-white border-b border-gray-200">
         <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
           <Database className="h-6 w-6 text-[#2196F3]" />
           Add Data Source - {stepTitles[step]}
         </CardTitle>
+        <div className="absolute top-8 right-9 z-50 flex items-center gap-4">
+          <ToggleButton
+            checked={sourceStatus === "Active"}
+            onChange={() =>
+              setSourceStatus((prev) =>
+                prev === "Active" ? "Inactive" : "Active"
+              )
+            }
+          />
+          {/* Status text */}
+          <span
+            className={`text-sm font-medium w-[40px] text-right ${
+              sourceStatus === "Active" ? "text-green-600" : "text-red-500"
+            }`}
+          >
+            {sourceStatus}
+          </span>
+        </div>
+
+
 
         {/* Progress indicator */}
         <div className="flex items-center space-x-2 mt-4">

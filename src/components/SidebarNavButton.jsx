@@ -29,7 +29,7 @@ export default function SidebarNavButton({
         onMobileClose && onMobileClose();
         const firstId = workspaces && workspaces.length > 0 ? (workspaces[0].id || workspaces[0]._id) : null;
         if (firstId) {
-          wouterNavigate(`${fallback}/${firstId}`);
+          wouterNavigate(`${fallback}`);
         } else {
           wouterNavigate(fallback);
         }

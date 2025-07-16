@@ -26,9 +26,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Home} />
-      <Route path="/admin/:workspaceID" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
+      <Route path="/admin" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
       <Route path="/admin-panel" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
-      <Route path="/user-management/:workspaceID" component={UserManagementPage} />
+      <Route path="/user-management" component={UserManagementPage} />
       <Route path="/user" component={UserManagementPage} />
       <Route path="/control-panel" component={ControlPanel} />
       <Route>404: Not Found!</Route>
