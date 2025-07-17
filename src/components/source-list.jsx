@@ -43,7 +43,7 @@ export default function SourceList({
   onDeleteSource, selectedWorkspace, setSelectedWorkspace
 }) {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState("name");
+  const [sortField, setSortField] = useState("sourceName");
   const [sortDirection, setSortDirection] = useState("asc");
   const [selectedSources, setSelectedSources] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,11 +52,17 @@ export default function SourceList({
 
   // Filter sources based on search term
   const filteredSources = useMemo(() => {
-    return sources.filter(source =>
-      source.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      source.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      source.status.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return sources.filter(source => {
+      const name = source?.configuration?.sourceName || "";
+      const type = source?.configuration?.sourceType || "";
+      const status = source?.status || "";
+
+      return (
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        status.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    });
   }, [sources, searchTerm]);
 
   // Sort sources
@@ -282,8 +288,8 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                         onCheckedChange={(checked) => handleSelectSource(source.id, checked)}
                       />
                     </TableCell>
-                    <TableCell className="font-medium text-[#2196F3]">{source.name}</TableCell>
-                    <TableCell className="text-gray-600">{source.type}</TableCell>
+                    <TableCell className="font-medium text-[#2196F3]">{source?.configuration?.sourceName || "Unnamed"}</TableCell>
+                    <TableCell className="text-gray-600">{source?.configuration?.sourceType || "N/A"}</TableCell>
                     <TableCell className="text-gray-600">{source.location || 'N/A'}</TableCell>
                     <TableCell className="text-gray-600">{source.configuration?.authType || source.configuration?.authMethod || 'N/A'}</TableCell>
                     <TableCell>{getStatusBadge(source.status?.toLowerCase() || 'active')}</TableCell>
