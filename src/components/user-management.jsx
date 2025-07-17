@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Plus,
   MoreHorizontal,
@@ -47,11 +47,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
-import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
 import { CSSTransition } from 'react-transition-group';
-import { useParams } from "wouter";
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
+import useFetchPipeline from "../hooks/useFetchPipeline";
 import { useSelector } from "react-redux";
 
 function UserManagement() {
@@ -92,34 +91,24 @@ function UserManagement() {
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(() => workspaces[0]?.id || "");
-  const currentWorkspace = workspaces.find(ws => ws.id === selectedWorkspaceId);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(() => {
+    // Only set the first workspace if workspaces array exists and has items
+    return workspaces && workspaces.length > 0 ? workspaces[0] || "" : "";
+  });
 
   // Fetch available sources for the selected workspace
-  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspaceId);
-  console.log(availableSources);
+  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspace.id);
+  const { sources: pipelineSources, isLoading: pipelineLoading, error: pipelineError } = useFetchPipeline(selectedWorkspace.id);
 
-  // Sample user data with medical context
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "Medical Data Anonymization",
-      source: "Patient",
-      destination: "Analytics",
-      technique: "Anonymization",
-      status: "Active",
-      created: "4/18/2023",
-    },
-    {
-      id: 2,
-      name: "Clinical Data Tokenization",
-      source: "Clinical",
-      destination: "Analytics",
-      technique: "Tokenization",
-      status: "Active",
-      created: "4/15/2023",
-    },
-  ]);
+  // Set the first workspace when workspaces are loaded
+  useEffect(() => {
+    if (workspaces && workspaces.length > 0 && !selectedWorkspace) {
+      setSelectedWorkspace(workspaces[0] || "");
+    }
+  }, [workspaces, selectedWorkspace]);
+  
+  // Sample user data with medical context (fallback for demo)
+  const [pipelines, setPipelines] = useState([]);
 
   const [newUser, setNewUser] = useState({
     name: "",
@@ -129,26 +118,32 @@ function UserManagement() {
     status: "Active",
   });
 
-  // Filter users based on search term
-  const filteredUsers = users.filter(
-    (user) =>
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.department.toLowerCase().includes(searchTerm.toLowerCase()),
+  // Use pipelineSources if available, otherwise fallback to users
+  const pipelineData = pipelineSources && pipelineSources.length > 0 ? pipelineSources : pipelines;
+  
+  // Filter pipelines based on search term
+  const filteredUsers = pipelineData.filter(
+    (pipeline) =>
+      (pipeline.name && pipeline.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (pipeline.source && pipeline.source.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (pipeline.destination && pipeline.destination.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (pipeline.technique && pipeline.technique.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   // Sort users
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
-    const aValue = a[sortField];
-    const bValue = b[sortField];
+  const sortedUsers = filteredUsers && filteredUsers.length > 0 ? [...filteredUsers].sort((a, b) => {
+    const aValue = a[sortField] || '';
+    const bValue = b[sortField] || '';
 
-    if (sortDirection === "asc") {
-      return aValue.localeCompare(bValue);
-    } else {
-      return bValue.localeCompare(aValue);
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      if (sortDirection === "asc") {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
     }
-  });
+    return 0;
+  }) : [];
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -168,7 +163,7 @@ function UserManagement() {
   };
 
   const handleSelectAll = (checked) => {
-    if (checked) {
+    if (checked && sortedUsers) {
       setSelectedUsers(sortedUsers.map((user) => user.id));
     } else {
       setSelectedUsers([]);
@@ -205,7 +200,7 @@ function UserManagement() {
       masking: { className: "bg-[#FF9800] text-white", label: "Masking" },
     };
 
-    const config = techniqueConfig[technique.toLowerCase()] || {
+    const config = technique ? techniqueConfig[technique.toLowerCase()] : {
       className: "bg-[#4CAF50] text-white",
       label: technique,
     };
@@ -292,8 +287,8 @@ function UserManagement() {
         schedule: runConfiguration.schedule,
         notifications: runConfiguration.notifications,
         status: newUser.status || "Active",
-        workspaceID: currentWorkspace.id,
-        workspaceName: currentWorkspace.workspaceName,
+        workspaceID: selectedWorkspace.id,
+        workspaceName: selectedWorkspace.workspaceName,
         created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
         destinationType,
         connectionString,
@@ -317,10 +312,10 @@ function UserManagement() {
       });
 
       if (isEditing && editPipeline) {
-        setUsers(users => users.map(u => u.id === pipeline.id ? pipeline : u));
+        setPipelines(users => users.map(u => u.id === pipeline.id ? pipeline : u));
         toast({ title: "Pipeline Updated", description: `${pipeline.name} has been updated.` });
       } else {
-        setUsers([...users, pipeline]);
+        setPipelines([...pipelines, pipeline]);
         toast({ title: "Pipeline Created", description: `${pipeline.name} has been added to the system` });
       }
       resetForm();
@@ -366,13 +361,13 @@ function UserManagement() {
   };
 
   const handleDeleteUser = (userId) => {
-    const user = users.find((u) => u.id === userId);
+    const user = pipelines.find((u) => u.id === userId);
     if (
       window.confirm(
         `Are you sure you want to delete "${user.name}"? This action cannot be undone.`,
       )
     ) {
-      setUsers(users.filter((u) => u.id !== userId));
+      setPipelines(pipelines.filter((u) => u.id !== userId));
       toast({
         title: "User Deleted",
         description: `${user.name} has been removed from the system`,
@@ -382,8 +377,8 @@ function UserManagement() {
   };
 
   const handleToggleStatus = (userId) => {
-    setUsers(
-      users.map((user) =>
+    setPipelines(
+      pipelines.map((user) =>
         user.id === userId
           ? {
             ...user,
@@ -399,7 +394,7 @@ function UserManagement() {
     const baseName = pipeline.name.replace(/ \(\d+\)$/, "");
     const regex = new RegExp(`^${baseName.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}(?: \\((\\d+)\\))?$`);
     let maxClone = 0;
-    users.forEach((p) => {
+    pipelineData.forEach((p) => {
       const match = p.name.match(regex);
       if (match && match[1]) {
         maxClone = Math.max(maxClone, parseInt(match[1], 10));
@@ -415,7 +410,7 @@ function UserManagement() {
       created: new Date().toLocaleDateString(),
       status: "new",
     };
-    setUsers([...users, newPipeline]);
+    setPipelines([...pipelines, newPipeline]);
     toast({
       title: "Pipeline Cloned",
       description: (
@@ -460,7 +455,7 @@ function UserManagement() {
     if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
     runTimeoutRef.current = setTimeout(() => {
       setRunPipelineStatus("completed");
-      setUsers(users => users.map(p =>
+      setPipelines(users => users.map(p =>
         p.id === pipeline.id ? { ...p, status: "Completed" } : p
       ));
     }, 2500);
@@ -552,9 +547,12 @@ function UserManagement() {
             <select
               id="workspace-select"
               className="border border-gray-300 rounded px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={selectedWorkspaceId}
-              onChange={e => setSelectedWorkspaceId(e.target.value)}
+              value={selectedWorkspace.id}
+              onChange={e => setSelectedWorkspace(workspaces.find(ws => ws.id === e.target.value))}
             >
+              {!selectedWorkspace && (
+                <option value="" disabled>Select a workspace</option>
+              )}
               {workspaces.map(ws => (
                 <option key={ws.id} value={ws.id}>{ws.workspaceName || ws.name || ws.id}</option>
               ))}
@@ -1024,84 +1022,104 @@ function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((pipeline) => (
-                <TableRow
-                  key={pipeline.id}
-                  className="bg-white hover:bg-gray-50 border-gray-200"
-                >
-                  <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-normal">
-                    {pipeline.name}
-                  </TableCell>
-                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                    {pipeline.source}
-                  </TableCell>
-                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                    {pipeline.destination}
-                  </TableCell>
-                  <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
-                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                    {pipeline.processingAgent || "Not specified"}
-                  </TableCell>
-                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                    {pipeline.schedule || "Not configured"}
-                  </TableCell>
-                  <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
-                  <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                    {pipeline.created}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleEditPipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <Pencil className="h-4 w-4 text-blue-500" /> Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => setViewPipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <Eye className="h-4 w-4 text-blue-500" /> View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleClonePipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <Copy className="h-4 w-4 text-blue-500" /> Clone
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => handleManualRerun(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run Manually
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                  <TableCell className="whitespace-normal p-1 min-w-[100px] max-w-[140px] text-sm">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2 font-semibold text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50 px-2 py-1 text-sm"
-                      onClick={() => {
-                        setPromptPipeline(pipeline);
-                        setShowPromptListModal(true);
-                      }}
-                    >
-                      <Sparkles className="h-4 w-4 text-purple-500" />
-                    </Button>
+              {pipelineLoading ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                    Loading pipelines...
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : pipelineError ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-red-500 py-8">
+                    Error loading pipelines: {pipelineError.message || 'Unknown error'}
+                  </TableCell>
+                </TableRow>
+              ) : sortedUsers && sortedUsers.length > 0 ? (
+                sortedUsers.map((pipeline) => (
+                  <TableRow
+                    key={pipeline.id}
+                    className="bg-white hover:bg-gray-50 border-gray-200"
+                  >
+                    <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-normal">
+                      {pipeline.name}
+                    </TableCell>
+                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                      {pipeline.source}
+                    </TableCell>
+                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                      {pipeline.destination}
+                    </TableCell>
+                    <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                      {pipeline.processingAgent || "Not specified"}
+                    </TableCell>
+                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                      {pipeline.schedule || "Not configured"}
+                    </TableCell>
+                    <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                      {pipeline.created}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleEditPipeline(pipeline)}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setViewPipeline(pipeline)}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                          >
+                            <Eye className="h-4 w-4 text-blue-500" /> View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleClonePipeline(pipeline)}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                          >
+                            <Copy className="h-4 w-4 text-blue-500" /> Clone
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleManualRerun(pipeline)}
+                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                          >
+                            <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run Manually
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                    <TableCell className="whitespace-normal p-1 min-w-[100px] max-w-[140px] text-sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex items-center gap-2 font-semibold text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50 px-2 py-1 text-sm"
+                        onClick={() => {
+                          setPromptPipeline(pipeline);
+                          setShowPromptListModal(true);
+                        }}
+                      >
+                        <Sparkles className="h-4 w-4 text-purple-500" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                    No pipelines found for the selected workspace.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -1351,7 +1369,7 @@ function UserManagement() {
                       if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
                       runTimeoutRef.current = setTimeout(() => {
                         setRunPipelineStatus("completed");
-                        setUsers(users => users.map(p =>
+                        setPipelines(users => users.map(p =>
                           p.id === (reviewPromptPipeline?.id || promptPipeline?.id) ? { ...p, status: "Completed" } : p
                         ));
                       }, 2500);
