@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import {
   Plus,
   MoreHorizontal,
@@ -47,9 +47,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
-import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
 import { CSSTransition } from 'react-transition-group';
-import { useParams } from "wouter";
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
 import { useSelector } from "react-redux";
@@ -97,10 +95,6 @@ function UserManagement() {
 
   // Fetch available sources for the selected workspace
   const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspaceId);
-  console.log(availableSources);
-
-  // Fetch available sources for the current workspace
-  const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(workspaceID);
   console.log(availableSources);
 
   // Sample user data with medical context
