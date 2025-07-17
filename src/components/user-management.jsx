@@ -1,5 +1,5 @@
 /* eslint-disable */
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import {
   Plus,
   MoreHorizontal,
@@ -47,9 +47,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
-import { Popover, PopoverTrigger, PopoverContent } from "../components/ui/popover";
 import { CSSTransition } from 'react-transition-group';
-import { useParams } from "wouter";
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
 import { useSelector } from "react-redux";
