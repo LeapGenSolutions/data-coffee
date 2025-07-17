@@ -43,6 +43,9 @@ import ToggleButton from "./ui/toggle-button";
 import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { cn } from "../lib/utils";
+import { useSaveSource } from "../hooks/useSaveSource";
+import { useSelector } from "react-redux";
+import { navigate } from "wouter/use-browser-location";
 
 
 // Define basic schema and schemas for each source type and location
@@ -223,7 +226,7 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
+export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspace }) {
   const [, setErrors] = useState({});
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
@@ -231,7 +234,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved }) {
   const [sourceStatus, setSourceStatus] = useState("Active");
   const testAzureBlobConnection = useTestAzureBlobConnection();
   const listAzureBlobFiles = useListAzureBlobFiles();
-
+  const user = useSelector((state) => state.me.me);
 
   // Add uploadedFiles state at the top level
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -2969,11 +2972,7 @@ function handleTestConnection() {
           ) : (
             <Button
               type="button"
-              onClick={() => {
-                console.log("Save Source button clicked");
-                const currentData = form.getValues();
-                onSubmit(currentData);
-              }}
+              onClick={handleSaveSource}
               className="bg-[#2196F3] hover:bg-[#1976D2] text-white"
             >
               Save Source

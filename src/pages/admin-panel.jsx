@@ -6,6 +6,7 @@ import SourceList from "../components/source-list";
 import { ReportGrid } from "../components/report-grid";
 import DashboardLayout from "../layouts/dashboard-layout";
 import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
+import { useSelector } from "react-redux";
 
 export default function AdminPanel() {
   const [showSourceForm, setShowSourceForm] = useState(false);
@@ -29,6 +30,16 @@ export default function AdminPanel() {
       createdAt: "2024-01-12T14:20:00Z"
     }
   ]);
+  // Workspace selection state (shared with SourceForm and SourceList)
+  const [selectedWorkspace, setSelectedWorkspace] = useState([]);
+  const workspaces = useSelector((state) => state.workspaces.workspaces) || [];
+  // If workspaces change and selectedWorkspace is not in the list, update it
+  React.useEffect(() => {
+    if (workspaces.length > 0 && !workspaces.find(ws => ws.id === selectedWorkspace.id)) {
+      setSelectedWorkspace(workspaces[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaces]);
 
   const handleSourceSaved = (newSource) => {
     console.log("AdminPanel: handleSourceSaved called with:", newSource);
@@ -85,6 +96,7 @@ export default function AdminPanel() {
                 onComplete={() => setShowSourceForm(false)}
                 onCancel={() => setShowSourceForm(false)}
                 onSourceSaved={handleSourceSaved}
+                currentWorkspace={selectedWorkspace}
               />
             </ErrorBoundary>
           ) : (
@@ -93,6 +105,8 @@ export default function AdminPanel() {
               onAddSource={() => setShowSourceForm(true)}
               onEditSource={handleEditSource}
               onDeleteSource={handleDeleteSource}
+            selectedWorkspace={selectedWorkspace}
+            setSelectedWorkspace={setSelectedWorkspace}
             />
           )}
         </TabsContent>
