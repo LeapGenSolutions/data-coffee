@@ -40,6 +40,7 @@ import {
 import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { useSaveSource } from "../hooks/useSaveSource";
+import { usePatchSource } from "../hooks/usePatchSource";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
 
@@ -197,7 +198,7 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ onCancel, onSourceSaved, initialSource }) {
+export function SourceForm({ mode = "add", onCancel, onSourceSaved, initialSource }) {
   // Handler for Save Source button
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
@@ -390,57 +391,72 @@ export function SourceForm({ onCancel, onSourceSaved, initialSource }) {
   };
 
   const saveSourceMutation = useSaveSource();
+  const patchSourceMutation = usePatchSource();
 
   function handleSaveSource() {
-    const currentData = form.getValues();
+  const currentData = form.getValues();
+  const newSource = {
+    name: currentData.sourceName || "Untitled Source",
+    type: currentData.sourceType || "unknown",
+    location: currentData.location || "on-prem",
+    authType: currentData.authType || "",
+    customPrompt: currentData.customPrompt || "",
+    dataSelectionMode: currentData.dataSelectionMode || "all",
+    selectedTables: currentData.selectedTables || [],
+    selectedColumns: currentData.selectedColumns || [],
+    customQuery: currentData.customQuery || "",
+    configuration: currentData,
+    status: "Active",
+    lastSync: new Date().toISOString(),
+    createdAt:
+      initialSource?.createdAt ||
+      currentData.createdAt ||
+      new Date().toISOString(),
+  };
 
-    // Create a new source object with all the form data
-    const newSource = {
-      id: initialSource?.id || currentData.id || `source-${Date.now()}`,
-      name: currentData.sourceName || "Untitled Source",
-      type: currentData.sourceType || "unknown",
-      location: currentData.location || "on-prem",
-      authType: currentData.authType || "",
-      customPrompt: currentData.customPrompt || "",
-      dataSelectionMode: currentData.dataSelectionMode || "all",
-      selectedTables: currentData.selectedTables || [],
-      selectedColumns: currentData.selectedColumns || [],
-      customQuery: currentData.customQuery || "",
-      configuration: currentData,
-      status: "Active",
-      lastSync: new Date().toISOString(),
-      createdAt:
-        initialSource?.createdAt ||
-        currentData.createdAt ||
-        new Date().toISOString(),
-      // workspaceId: currentWorkspace.id,
-      // workspaceName: currentWorkspace.workspaceName,
-    };
+  const mutationFn = mode === "add" ? saveSourceMutation : patchSourceMutation;
 
-    saveSourceMutation.mutate(
+  if (mode === "add") {
+    mutationFn.mutate(
       { email: user.email, newSource },
       {
-        onSuccess: () => {
-          onSourceSaved?.(newSource);
+        onSuccess: (data) => {
+          const savedSource = {
+            ...newSource,
+            ...data,
+            name: data.configuration?.sourceName || newSource.name
+          };
+          onSourceSaved?.(savedSource);
           navigate(`/admin`);
         },
         onError: (error) => {
-          toast({
-            title: "Failed to Save Data Source",
-            description: error?.message || "An error occurred.",
-            variant: "destructive",
-          });
+          console.error("Failed to Save Data Source", error);
         },
       }
     );
-  };
-  
-  // Update form state when source type changes
+  } else {
+
+    newSource.id = initialSource.id;
+
+    mutationFn.mutate(
+      { email: user.email, id: initialSource.id, updates: newSource },
+      {
+        onSuccess: (data) => {
+          const savedSource = { ...newSource, ...data };
+          onSourceSaved?.(savedSource);
+          navigate(`/admin`);
+        },
+        onError: (error) => {
+          console.error("Failed to update Data Source", error);
+        },
+      }
+    );
+  }
+}
+
   const handleSourceTypeChange = (value) => {
     setSourceType(value);
     form.setValue("sourceType", value);
-
-    // Always reset to step 1 when changing source type
     setStep(1);
     form.setValue("step", 1);
 
@@ -2776,7 +2792,7 @@ export function SourceForm({ onCancel, onSourceSaved, initialSource }) {
               onClick={handleSaveSource}
               className="bg-[#2196F3] hover:bg-[#1976D2] text-white"
             >
-              Save Source
+               {mode === "edit" ? "Edit Source" : "Save Source"}
             </Button>
           )}
         </div>

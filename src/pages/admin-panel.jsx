@@ -10,26 +10,7 @@ import { useLocation } from "wouter";
 
 export default function AdminPanel() {
   const [location, setLocation] = useLocation();
-  const [sources, setSources] = useState([
-    {
-      id: 1,
-      name: "Customer Database",
-      type: "sql",
-      location: "on-prem",
-      status: "Active",
-      lastSync: "2024-01-15T10:30:00Z",
-      createdAt: "2024-01-10T09:00:00Z"
-    },
-    {
-      id: 2,
-      name: "Sales Analytics",
-      type: "postgresql",
-      location: "cloud",
-      status: "Active",
-      lastSync: "2024-01-15T11:45:00Z",
-      createdAt: "2024-01-12T14:20:00Z"
-    }
-  ]);
+  const [sources, setSources] = useState([]);
 
   const isAdd = location === "/admin/source";
   const isEdit = location.startsWith("/admin/source/edit/");
@@ -38,6 +19,7 @@ export default function AdminPanel() {
   const editingSource = isEdit
   ? sources.find((s) => String(s.id) === editingId)
   : null;
+
 
   const handleSourceSaved = (savedSource) => {
   setSources((prev) => {
@@ -93,6 +75,7 @@ export default function AdminPanel() {
           {isAdd || isEdit ? (
             <SourceForm
               initialSource={editingSource}
+              mode={isEdit ? "edit" : "add"}
               onSourceSaved={handleSourceSaved}
               onCancel={() => setLocation("/admin")}
             />
