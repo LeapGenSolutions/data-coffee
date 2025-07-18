@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { useSelector } from 'react-redux';
-import { 
-  Search, 
-  Plus, 
-  ArrowUpDown, 
-  MoreHorizontal, 
-  Eye, 
-  Edit, 
+import {
+  Search,
+  Plus,
+  ArrowUpDown,
+  MoreHorizontal,
+  Eye,
+  Edit,
   Trash2,
   Database
 } from "lucide-react";
@@ -38,8 +38,8 @@ import {
 } from "../components/ui/pagination";
 import { useToast } from "../hooks/use-toast";
 
-export default function SourceList({ 
-  sources = [], onAddSource, onEditSource, 
+export default function SourceList({
+  sources=[], onAddSource, onEditSource,
   onDeleteSource, selectedWorkspace, setSelectedWorkspace
 }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -52,17 +52,13 @@ export default function SourceList({
 
   // Filter sources based on search term
   const filteredSources = useMemo(() => {
-    return sources.filter(source => {
-      const name = source?.configuration?.sourceName || "";
-      const type = source?.configuration?.sourceType || "";
-      const status = source?.status || "";
-
-      return (
-        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        status.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    });
+    const term = searchTerm.toLowerCase();
+    return sources.filter(
+      (source) =>
+        source.sourceName.toLowerCase().includes(term) ||
+        source.type.toLowerCase().includes(term) ||
+        source.status.toLowerCase().includes(term)
+    );
   }, [sources, searchTerm]);
 
   // Sort sources
@@ -70,7 +66,7 @@ export default function SourceList({
     return [...filteredSources].sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
-      
+
       if (sortDirection === "asc") {
         return aValue.localeCompare(bValue);
       } else {
@@ -109,17 +105,6 @@ export default function SourceList({
     }
   };
 
-  const handleEdit = (source) => {
-    if (onEditSource) {
-      onEditSource(source);
-    } else {
-      toast({
-        title: "Edit Source",
-        description: `Opening edit form for ${source.name}`,
-      });
-    }
-  };
-
   const handleDelete = (source) => {
     if (window.confirm(`Are you sure you want to delete "${source.name}"? This action cannot be undone.`)) {
       if (onDeleteSource) {
@@ -142,19 +127,19 @@ export default function SourceList({
   const handleView = (source) => {
     // Create a detailed view modal or navigate to details page
     const details = `
-Source Details:
-- Name: ${source.name}
-- Type: ${source.type}
-- Location: ${source.location}
-- Status: ${source.status}
-- Created: ${new Date(source.createdAt).toLocaleDateString()}
-- Last Sync: ${new Date(source.lastSync).toLocaleDateString()}
-${source.customPrompt ? `- Custom Prompt: ${source.customPrompt}` : ''}
-${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : ''}
+        Source Details:
+        - Name: ${source.name}
+        - Type: ${source.type}
+        - Location: ${source.location}
+        - Status: ${source.status}
+        - Created: ${new Date(source.createdAt).toLocaleDateString()}
+        - Last Sync: ${new Date(source.lastSync).toLocaleDateString()}
+        ${source.customPrompt ? `- Custom Prompt: ${source.customPrompt}` : ''}
+        ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : ''}
     `.trim();
-    
+
     alert(details);
-    
+
     toast({
       title: "Source Details",
       description: `Viewing configuration for ${source.name}`,
@@ -169,7 +154,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
     };
 
     const config = statusConfig[status] || statusConfig.inactive;
-    
+
     return (
       <Badge className={config.className}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -212,7 +197,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
             </select>
           </div>
         </div>
-        <Button 
+        <Button
           onClick={onAddSource}
           className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
         >
@@ -247,7 +232,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer text-gray-700 font-medium"
                     onClick={() => handleSort("name")}
                   >
@@ -256,7 +241,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                       <ArrowUpDown className="h-4 w-4" />
                     </div>
                   </TableHead>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer text-gray-700 font-medium"
                     onClick={() => handleSort("type")}
                   >
@@ -267,7 +252,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                   </TableHead>
                   <TableHead className="text-gray-700 font-medium">Location</TableHead>
                   <TableHead className="text-gray-700 font-medium">Auth Type</TableHead>
-                  <TableHead 
+                  <TableHead
                     className="cursor-pointer text-gray-700 font-medium"
                     onClick={() => handleSort("status")}
                   >
@@ -305,11 +290,11 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                             <Eye className="mr-2 h-4 w-4" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(source)} className="text-gray-700 hover:bg-gray-100">
+                          <DropdownMenuItem onClick={() => onEditSource(source)} className="text-gray-700 hover:bg-gray-100">
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleDelete(source)}
                             className="text-red-600 hover:bg-gray-100"
                           >
@@ -334,7 +319,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
               <Pagination>
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious 
+                    <PaginationPrevious
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                     />
@@ -350,7 +335,7 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
                     </PaginationItem>
                   ))}
                   <PaginationItem>
-                    <PaginationNext 
+                    <PaginationNext
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
                     />
