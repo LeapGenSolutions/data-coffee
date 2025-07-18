@@ -44,6 +44,7 @@ import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection"
 import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { cn } from "../lib/utils";
 import { useSaveSource } from "../hooks/useSaveSource";
+import { usePatchSource } from "../hooks/usePatchSource.js";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
 
@@ -142,35 +143,35 @@ const getValidationSchema = (sourceType, location) => {
   }
 
   if (sourceType === "files" && location === "cloud") {
-  return schema
-    .extend({
-      cloudProvider: z.string().min(1, "Cloud provider is required"),
-      containerName: z.string().min(1, "Container name is required"),
-      fileFormat: z.string().min(1, "File format is required"),
-      pathPrefix: z.string().min(1, "Path Prefix is required"),
-      connectionString: z.string().optional(),
-      authType: z.string().optional(),
-    })
-    .superRefine((data, ctx) => {
-      if (data.cloudProvider === "azure") {
-        if (!data.connectionString || data.connectionString.trim() === "") {
-          ctx.addIssue({
-            path: ["connectionString"],
-            message: "Azure Connection String is required",
-            code: z.ZodIssueCode.custom,
-          });
+    return schema
+      .extend({
+        cloudProvider: z.string().min(1, "Cloud provider is required"),
+        containerName: z.string().min(1, "Container name is required"),
+        fileFormat: z.string().min(1, "File format is required"),
+        pathPrefix: z.string().min(1, "Path Prefix is required"),
+        connectionString: z.string().optional(),
+        authType: z.string().optional(),
+      })
+      .superRefine((data, ctx) => {
+        if (data.cloudProvider === "azure") {
+          if (!data.connectionString || data.connectionString.trim() === "") {
+            ctx.addIssue({
+              path: ["connectionString"],
+              message: "Azure Connection String is required",
+              code: z.ZodIssueCode.custom,
+            });
+          }
+        } else {
+          if (!data.authType || data.authType.trim() === "") {
+            ctx.addIssue({
+              path: ["authType"],
+              message: "Auth type is required",
+              code: z.ZodIssueCode.custom,
+            });
+          }
         }
-      } else {
-        if (!data.authType || data.authType.trim() === "") {
-          ctx.addIssue({
-            path: ["authType"],
-            message: "Auth type is required",
-            code: z.ZodIssueCode.custom,
-          });
-        }
-      }
-    });
-}
+      });
+  }
 
   if (sourceType === "blob" && location === "on-prem") {
     return schema.extend({
@@ -226,7 +227,8 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspace }) {
+export function SourceForm({ mode = "add", initialSource,  
+  onCancel, onSourceSaved, currentWorkspace }) {
   const [, setErrors] = useState({});
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
@@ -243,17 +245,17 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
   const dynamicSchema = getValidationSchema(sourceType, location);
 
   const form = useForm({
-  resolver: zodResolver(dynamicSchema),
-  mode: "onChange",  // this enables live validation as user types/selects
-  defaultValues: {
-    step: 1,
-    sourceName: "",
-    sourceType: "",
-    location: "on-prem",
-    customPrompt: "",
-    dataSelectionMode: "",
-  },
-});
+    resolver: zodResolver(dynamicSchema),
+    mode: "onChange",  // this enables live validation as user types/selects
+    defaultValues: {
+      step: 1,
+      sourceName: "",
+      sourceType: "",
+      location: "on-prem",
+      customPrompt: "",
+      dataSelectionMode: "",
+    },
+  });
 
   // Watch for changes in form values to update state
   const watchSourceType = form.watch("sourceType");
@@ -275,10 +277,30 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
   }, [watchSourceType, watchLocation]);
 
   useEffect(() => {
-  setAzureFiles([]);
-  setSelectedTables([]);
-  setIsAzureFilesLoaded(false);
-}, [watchFileFormat, watchContainerName, watchPathPrefix]);
+    if (initialSource) {
+      form.reset({
+        id: initialSource.id,
+        createdAt: initialSource.createdAt,
+        sourceName: initialSource.name || "",
+        sourceType: initialSource.type || "",
+        location: initialSource.location || "",
+        authType: initialSource.authType || "",
+        customPrompt: initialSource.customPrompt || "",
+        ...initialSource.configuration,
+        step: 1,
+      });
+      setStep(1);
+    } else {
+      form.reset({ id: "", createdAt: "" });
+      setStep(1);
+    }
+  }, [initialSource, form]);
+
+  useEffect(() => {
+    setAzureFiles([]);
+    setSelectedTables([]);
+    setIsAzureFilesLoaded(false);
+  }, [watchFileFormat, watchContainerName, watchPathPrefix]);
 
   // Data selection state
   const [selectionMode, setSelectionMode] = useState("all");
@@ -292,91 +314,91 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
   const [isAzureFilesLoaded, setIsAzureFilesLoaded] = useState(false);
 
   const handleListFilesButtonClick = async () => {
-      const connectionString = form.getValues("connectionString");
-      const containerName = form.getValues("containerName");
-      const blobPath = form.getValues("pathPrefix") || "";
-      const fileType = form.getValues("fileFormat");
-      if (!connectionString || !containerName || !fileType) {
-        toast({
-          title: "Missing Required Fields",
-          description: "Please provide connection string, container name, and file format.",
-          variant: "destructive",
-        });
-        return;
-      }
-      console.log({
+    const connectionString = form.getValues("connectionString");
+    const containerName = form.getValues("containerName");
+    const blobPath = form.getValues("pathPrefix") || "";
+    const fileType = form.getValues("fileFormat");
+    if (!connectionString || !containerName || !fileType) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please provide connection string, container name, and file format.",
+        variant: "destructive",
+      });
+      return;
+    }
+    console.log({
       connectionString: form.getValues("connectionString"),
       containerName: form.getValues("containerName"),
       blobPath: form.getValues("pathPrefix"),
       fileType: form.getValues("fileFormat"),
     });
-      listAzureBlobFiles.mutate(
-        { connectionString, containerName, blobPath: blobPath || "", fileType },
-        {
-          onSuccess: (data) => {
-            if (data.success && Array.isArray(data.files)) {
-              setAzureFiles(data.files);
-              setIsAzureFilesLoaded(true);
-              setSelectedTables(data.files);
-            } else {
-              setAzureFiles([]);
-              setIsAzureFilesLoaded(false);
-              toast({
-                title: "No files found",
-                description: "No files of the selected type were found in the container.",
-                variant: "destructive",
-              });
-            }
-          },
-          onError: (error) => {
+    listAzureBlobFiles.mutate(
+      { connectionString, containerName, blobPath: blobPath || "", fileType },
+      {
+        onSuccess: (data) => {
+          if (data.success && Array.isArray(data.files)) {
+            setAzureFiles(data.files);
+            setIsAzureFilesLoaded(true);
+            setSelectedTables(data.files);
+          } else {
             setAzureFiles([]);
             setIsAzureFilesLoaded(false);
             toast({
-              title: "Error listing files",
-              description: error?.response?.data?.message || error.message || "Could not list files from Azure Blob Storage.",
+              title: "No files found",
+              description: "No files of the selected type were found in the container.",
               variant: "destructive",
             });
-          },
-        }
-      );
-    }
-    
+          }
+        },
+        onError: (error) => {
+          setAzureFiles([]);
+          setIsAzureFilesLoaded(false);
+          toast({
+            title: "Error listing files",
+            description: error?.response?.data?.message || error.message || "Could not list files from Azure Blob Storage.",
+            variant: "destructive",
+          });
+        },
+      }
+    );
+  }
+
 
   useEffect(() => {
-  const currentSourceType = form.getValues("sourceType");
-  const currentLocation = form.getValues("location");
-  const connectionString = form.getValues("connectionString");
-  const containerName = form.getValues("containerName");
-  const blobPath = form.getValues("pathPrefix");
-  const fileType = form.getValues("fileFormat");
+    const currentSourceType = form.getValues("sourceType");
+    const currentLocation = form.getValues("location");
+    const connectionString = form.getValues("connectionString");
+    const containerName = form.getValues("containerName");
+    const blobPath = form.getValues("pathPrefix");
+    const fileType = form.getValues("fileFormat");
 
-  if (
-  step === 3 &&
-  selectionMode === "specific" &&
-  currentSourceType === "files" &&
-  currentLocation === "cloud" &&
-  watchCloudProvider === "azure" &&
-  azureFiles.length === 0 &&
-  watchFileFormat &&
-  watchContainerName &&
-  form.getValues("connectionString")
-) {
-    handleListFilesButtonClick({
-      connectionString,
-      containerName,
-      blobPath,
-      fileType
-    });
-  }
-}, [
-  step,
-  selectionMode,
-  azureFiles.length,
-  watchFileFormat,
-  watchContainerName,
-  watchPathPrefix,
-  watchCloudProvider
-]);
+    if (
+      step === 3 &&
+      selectionMode === "specific" &&
+      currentSourceType === "files" &&
+      currentLocation === "cloud" &&
+      watchCloudProvider === "azure" &&
+      azureFiles.length === 0 &&
+      watchFileFormat &&
+      watchContainerName &&
+      form.getValues("connectionString")
+    ) {
+      handleListFilesButtonClick({
+        connectionString,
+        containerName,
+        blobPath,
+        fileType
+      });
+    }
+  }, [
+    step,
+    selectionMode,
+    azureFiles.length,
+    watchFileFormat,
+    watchContainerName,
+    watchPathPrefix,
+    watchCloudProvider
+  ]);
 
   // Mock data for demonstration
   const availableTables = [
@@ -495,6 +517,7 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
   };
 
   const saveSourceMutation = useSaveSource();
+  const patchSourceMutation = usePatchSource();
 
   function handleSaveSource() {
     const currentData = form.getValues();
@@ -505,18 +528,19 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
       name: currentData.sourceName || "Untitled Source",
       type: currentData.sourceType || "unknown",
       location: location || currentData.location || "on-prem",
+      authType: currentData.authType || "",
       customPrompt: currentData.customPrompt || "",
-      dataSelectionMode: selectionMode || "all",
-      selectedTables: selectedTables || [],
-      selectedColumns: selectedColumns || [],
-      customQuery: customQuery || "",
+      dataSelectionMode: currentData.dataSelectionMode || "all",
+      selectedTables: currentData.selectedTables || [],
+      selectedColumns: currentData.selectedColumns || [],
+      customQuery: currentData.customPrompt || "",
       configuration: currentData,
       status: sourceStatus,
       lastSync: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       workspaceId: currentWorkspace.id,
       workspaceName: currentWorkspace.workspaceName
-    };    
+    };
 
     if (!user || !user.email) {
       toast({
@@ -527,29 +551,39 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
       return;
     }
 
+    const mutationFn = mode === "add" ? saveSourceMutation : patchSourceMutation;
 
-    saveSourceMutation.mutate(
-      { email: user.email, newSource },
-      {
-        onSuccess: (data) => {
-          toast({
-            title: "Data Source Saved Successfully!",
-            description: `${newSource.name} has been added to your data sources.`,
-          });
-          if (onSourceSaved) {
-            onSourceSaved(data || newSource);
-          }
-          navigate("/dashboard");
-        },
-        onError: (error) => {
-          toast({
-            title: "Failed to Save Data Source",
-            description: error?.response?.data?.message || error.message || "An error occurred while saving the data source.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
+
+    if (mode === "add") {
+      mutationFn.mutate(
+        { email: user.email, newSource },
+        {
+          onSuccess: (data) => {
+          },
+          onError: (error) => {
+            console.error("Failed to Save Data Source", error);
+          },
+        }
+      );
+    } 
+    else {
+
+      newSource.id = initialSource.id;
+
+      mutationFn.mutate(
+        { email: user.email, id: initialSource.id, updates: newSource },
+        {
+          onSuccess: (data) => {
+            const savedSource = { ...newSource, ...data };
+            onSourceSaved?.(savedSource);
+            navigate(`/admin`);
+          },
+          onError: (error) => {
+            console.error("Failed to update Data Source", error);
+          },
+        }
+      );
+    }
   }
   // Update form state when source type changes
   const handleSourceTypeChange = (value) => {
@@ -632,8 +666,6 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
     } else {
       console.log("onSourceSaved callback not available");
     }
-
-    onComplete();
   };
 
 
@@ -838,62 +870,62 @@ export function SourceForm({ onComplete, onCancel, onSourceSaved, currentWorkspa
           };
       }
     };
-const getFilesListSection = () => {
-  
-  return (
-  <div className="mt-4">
-    {/* Title + Radio Buttons Row */}
-    <div className="flex justify-between items-center mb-2">
-      <div className="flex items-center space-x-6">
-        <p className="text-sm font-medium text-gray-900">
-  Select Files: <span className="text-gray-500">({selectedTables.length} selected)</span>
-</p>
-          <label className="inline-flex items-center space-x-1 text-sm">
-          <input
-            type="radio"
-            name="fileSelection"
-            value="selectAll"
-            onChange={() => setSelectedTables([...azureFiles])}
-            checked={selectedTables.length === azureFiles.length}
-          />
-          <span>Select All</span>
-        </label>
-        <label className="inline-flex items-center space-x-1 text-sm">
-          <input
-            type="radio"
-            name="fileSelection"
-            value="unselectAll"
-            onChange={() => setSelectedTables([])}
-            checked={selectedTables.length === 0}
-          />
-          <span>Unselect All</span>
-        </label>
-      </div>
-    </div>
+    const getFilesListSection = () => {
 
-      {/* File List */}
-      <div className="max-h-64 overflow-y-auto border rounded p-2 bg-gray-50">
-        {azureFiles.map((file) => (
-          <label key={file} className="flex items-center space-x-2 mb-1">
-            <input
-              type="checkbox"
-              checked={selectedTables.includes(file)}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setSelectedTables([...selectedTables, file]);
-                } else {
-                  setSelectedTables(selectedTables.filter((f) => f !== file));
-                }
-              }}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-xs text-gray-700">{file}</span>
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-};
+      return (
+        <div className="mt-4">
+          {/* Title + Radio Buttons Row */}
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center space-x-6">
+              <p className="text-sm font-medium text-gray-900">
+                Select Files: <span className="text-gray-500">({selectedTables.length} selected)</span>
+              </p>
+              <label className="inline-flex items-center space-x-1 text-sm">
+                <input
+                  type="radio"
+                  name="fileSelection"
+                  value="selectAll"
+                  onChange={() => setSelectedTables([...azureFiles])}
+                  checked={selectedTables.length === azureFiles.length}
+                />
+                <span>Select All</span>
+              </label>
+              <label className="inline-flex items-center space-x-1 text-sm">
+                <input
+                  type="radio"
+                  name="fileSelection"
+                  value="unselectAll"
+                  onChange={() => setSelectedTables([])}
+                  checked={selectedTables.length === 0}
+                />
+                <span>Unselect All</span>
+              </label>
+            </div>
+          </div>
+
+          {/* File List */}
+          <div className="max-h-64 overflow-y-auto border rounded p-2 bg-gray-50">
+            {azureFiles.map((file) => (
+              <label key={file} className="flex items-center space-x-2 mb-1">
+                <input
+                  type="checkbox"
+                  checked={selectedTables.includes(file)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setSelectedTables([...selectedTables, file]);
+                    } else {
+                      setSelectedTables(selectedTables.filter((f) => f !== file));
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-xs text-gray-700">{file}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      );
+    };
 
     // Get query-related helpers
     const getQueryDescription = (sourceType) => {
@@ -1142,25 +1174,25 @@ const getFilesListSection = () => {
                   {location === "cloud" && form.getValues("cloudProvider") === "azure" ? (
                     <>
                       <div className="flex justify-end mt-4">
-                    <button
-                    type="button"
-                    className="mb-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    disabled={listAzureBlobFiles.isLoading}
-                    onClick={() => {
-                      handleListFilesButtonClick({
-                        connectionString: form.getValues("connectionString"),
-                        containerName: form.getValues("containerName"),
-                        blobPath: form.getValues("pathPrefix"),
-                        fileType: form.getValues("fileFormat")
-                      });
-                    }}
-                  >
-                    {listAzureBlobFiles.isLoading ? (
-                      "Loading Files..."
-                    ) : (
-                      <RefreshCcw className="w-4 h-4" />
-                    )}
-                  </button>
+                        <button
+                          type="button"
+                          className="mb-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          disabled={listAzureBlobFiles.isLoading}
+                          onClick={() => {
+                            handleListFilesButtonClick({
+                              connectionString: form.getValues("connectionString"),
+                              containerName: form.getValues("containerName"),
+                              blobPath: form.getValues("pathPrefix"),
+                              fileType: form.getValues("fileFormat")
+                            });
+                          }}
+                        >
+                          {listAzureBlobFiles.isLoading ? (
+                            "Loading Files..."
+                          ) : (
+                            <RefreshCcw className="w-4 h-4" />
+                          )}
+                        </button>
 
                       </div>
                       {isAzureFilesLoaded && azureFiles.length > 0 && getFilesListSection()}
@@ -1735,95 +1767,95 @@ const getFilesListSection = () => {
     }
 
     const renderCommonFields = (fields) => (
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {fields.map((field, index) => (
-      <FormField
-        key={index}
-        control={form.control}
-        name={field.name}
-        render={({ field: formField, fieldState }) => (
-          <FormItem>
-            <FormLabel className="text-sm font-semibold text-gray-800">
-              {field.label}
-            </FormLabel>
-            <FormControl>
-              <div className="relative">
-                {field.type === "select" ? (
-                  <Select
-                    onValueChange={formField.onChange}
-                    value={formField.value}
-                  >
-                    <SelectTrigger
-                      className={cn(
-                        "w-full pr-10 text-sm",
-                        fieldState.error
-                        ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
-                        : "border-gray-200"
-                      )}
-                    >
-                      <SelectValue placeholder={field.placeholder} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {field.options.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : field.type === "textarea" ? (
-                  <Textarea
-                    placeholder={field.placeholder}
-                    {...formField}
-                    className={cn(
-                      "w-full text-sm pr-10",
-                      fieldState.error
-                      ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
-                      : "border-gray-200"
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {fields.map((field, index) => (
+          <FormField
+            key={index}
+            control={form.control}
+            name={field.name}
+            render={({ field: formField, fieldState }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-semibold text-gray-800">
+                  {field.label}
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    {field.type === "select" ? (
+                      <Select
+                        onValueChange={formField.onChange}
+                        value={formField.value}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "w-full pr-10 text-sm",
+                            fieldState.error
+                              ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
+                              : "border-gray-200"
+                          )}
+                        >
+                          <SelectValue placeholder={field.placeholder} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {field.options.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : field.type === "textarea" ? (
+                      <Textarea
+                        placeholder={field.placeholder}
+                        {...formField}
+                        className={cn(
+                          "w-full text-sm pr-10",
+                          fieldState.error
+                            ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
+                            : "border-gray-200"
+                        )}
+                      />
+                    ) : field.type === "toggle" ? (
+                      <input
+                        type="checkbox"
+                        checked={formField.value || false}
+                        onChange={(e) => formField.onChange(e.target.checked)}
+                      />
+                    ) : (
+                      <Input
+                        type={field.type || "text"}
+                        placeholder={field.placeholder}
+                        {...formField}
+                        className={cn(
+                          "w-full text-sm pr-10 transition-all duration-200 ease-in-out",
+                          fieldState.error
+                            ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
+                            : "border-gray-200 focus:ring-blue-500"
+                        )}
+                      />
                     )}
-                  />
-                ) : field.type === "toggle" ? (
-                  <input
-                    type="checkbox"
-                    checked={formField.value || false}
-                    onChange={(e) => formField.onChange(e.target.checked)}
-                  />
-                ) : (
-              <Input
-                type={field.type || "text"}
-                placeholder={field.placeholder}
-                {...formField}
-                className={cn(
-                  "w-full text-sm pr-10 transition-all duration-200 ease-in-out",
-                  fieldState.error
-                    ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
-                    : "border-gray-200 focus:ring-blue-500"
-                )}
-              />
-                )}
 
-                {fieldState.error && (
-                  <div className="absolute right-2 top-2.5 text-red-500">
+                    {fieldState.error && (
+                      <div className="absolute right-2 top-2.5 text-red-500">
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </FormControl>
+                </FormControl>
 
-            {fieldState.error ? (
-              <p className="text-sm text-red-600 mt-1">
-                {fieldState.error.message}
-              </p>
-            ) : field.description ? (
-              <FormDescription className="text-xs text-gray-600">
-                {field.description}
-              </FormDescription>
-            ) : null}
-          </FormItem>
-        )}
-      />
-    ))}
-  </div>
-);
+                {fieldState.error ? (
+                  <p className="text-sm text-red-600 mt-1">
+                    {fieldState.error.message}
+                  </p>
+                ) : field.description ? (
+                  <FormDescription className="text-xs text-gray-600">
+                    {field.description}
+                  </FormDescription>
+                ) : null}
+              </FormItem>
+            )}
+          />
+        ))}
+      </div>
+    );
 
     // SQL Database Configuration
     if (currentSourceType === "sql") {
@@ -2337,60 +2369,60 @@ const getFilesListSection = () => {
         </div>
       );
       // Move handleTestConnection to the bottom of the component so it can be referenced anywhere
-function handleTestConnection() {
-  const currentSourceType = form.getValues("sourceType");
-  const currentLocation = form.getValues("location");
-  const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+      function handleTestConnection() {
+        const currentSourceType = form.getValues("sourceType");
+        const currentLocation = form.getValues("location");
+        const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
 
-  if (isAzure && currentSourceType === "files") {
-    const connectionString = form.getValues("connectionString");
-    const containerName = form.getValues("containerName");
+        if (isAzure && currentSourceType === "files") {
+          const connectionString = form.getValues("connectionString");
+          const containerName = form.getValues("containerName");
 
-    const newErrors = {};
-    if (!containerName) newErrors.containerName = "Container Name is required";
-    if (!connectionString) newErrors.connectionString = "Azure Connection String is required";
+          const newErrors = {};
+          if (!containerName) newErrors.containerName = "Container Name is required";
+          if (!connectionString) newErrors.connectionString = "Azure Connection String is required";
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      toast({
-        title: "Missing Required Fields",
-        description: "Please provide both Azure Connection String and Container Name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setErrors({}); // Clear errors if all good
-
-    testAzureBlobConnection.mutate(
-      { connectionString, containerName },
-      {
-        onSuccess: (data) => {
-          if (data.success) {
+          if (Object.keys(newErrors).length > 0) {
+            setErrors(newErrors);
             toast({
-              title: "Connection Successful",
-              description: data.message || "Connected to Azure Blob Storage!",
-              variant: "success",
-            });
-          } else {
-            toast({
-              title: "Connection Failed",
-              description: data.message || "Could not connect.",
+              title: "Missing Required Fields",
+              description: "Please provide both Azure Connection String and Container Name.",
               variant: "destructive",
             });
+            return;
           }
-        },
-        onError: (error) => {
-          toast({
-            title: "Connection Failed",
-            description: error?.response?.data?.message || error.message || "Could not connect.",
-            variant: "destructive",
-          });
-        },
+
+          setErrors({}); // Clear errors if all good
+
+          testAzureBlobConnection.mutate(
+            { connectionString, containerName },
+            {
+              onSuccess: (data) => {
+                if (data.success) {
+                  toast({
+                    title: "Connection Successful",
+                    description: data.message || "Connected to Azure Blob Storage!",
+                    variant: "success",
+                  });
+                } else {
+                  toast({
+                    title: "Connection Failed",
+                    description: data.message || "Could not connect.",
+                    variant: "destructive",
+                  });
+                }
+              },
+              onError: (error) => {
+                toast({
+                  title: "Connection Failed",
+                  description: error?.response?.data?.message || error.message || "Could not connect.",
+                  variant: "destructive",
+                });
+              },
+            }
+          );
+        }
       }
-    );
-  }
-}
     }
 
     // REST API Configuration
@@ -2696,96 +2728,96 @@ function handleTestConnection() {
         return (
           <div className="space-y-6">
             <div className="space-y-6">
-            <FormField
-  control={form.control}
-  name="sourceName"
-  render={({ field, fieldState }) => (
-    <FormItem>
-      <FormLabel className="text-sm font-medium text-gray-700">Source Name</FormLabel>
-      <FormControl>
-        <div className="relative">
-          <Input
-            placeholder="Enter a name for this data source"
-            {...field}
-            className={cn(
-              "!bg-white !text-gray-900 placeholder:!text-gray-500 pr-10",
-              fieldState.error
-                ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
-                : "border-gray-200"
-            )}
-          />
-          {fieldState.error && (
-            <div className="absolute right-2 top-2.5 text-red-500">
-            </div>
-          )}
-        </div>
-                </FormControl>
-                {fieldState.error ? (
-                  <p className="text-sm text-red-600 mt-1">
-                    The source name you entered is required. Please enter a valid name.
-                  </p>
-                ) : (
-                  <FormDescription className="text-xs text-gray-600">
-                    A unique and descriptive name for your data source
-                  </FormDescription>
-                )}
-              </FormItem>
-            )}
-          />
               <FormField
-  control={form.control}
-  name="sourceType"
-  render={({ field, fieldState }) => (
-    <FormItem>
-      <FormLabel className="text-sm font-medium text-gray-700">Source Type</FormLabel>
-      <FormControl>
-        <div className="relative">
-          <Select
-            onValueChange={(val) => {
-              field.onChange(val);
-              handleSourceTypeChange(val);
-            }}
-            value={field.value}
-          >
-            <SelectTrigger
-              className={cn(
-                "!bg-white !text-gray-900 placeholder:!text-gray-500 pr-10",
-                fieldState.error
-                  ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
-                  : "border-gray-200"
-              )}
-            >
-              <SelectValue placeholder="Select source type" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              <SelectItem value="sql" className="text-gray-900">SQL Database</SelectItem>
-              <SelectItem value="oracle" className="text-gray-900">Oracle DB</SelectItem>
-              <SelectItem value="postgresql" className="text-gray-900">PostgreSQL</SelectItem>
-              <SelectItem value="mongodb" className="text-gray-900">MongoDB</SelectItem>
-              <SelectItem value="files" className="text-gray-900">Files</SelectItem>
-              <SelectItem value="blob" className="text-gray-900">Blob Storage</SelectItem>
-              <SelectItem value="rest" className="text-gray-900">REST API</SelectItem>
-              <SelectItem value="datawarehouse" className="text-gray-900">Data Warehouse</SelectItem>
-            </SelectContent>
-          </Select>
-          {fieldState.error && (
-            <div className="absolute right-2 top-2.5 text-red-500">
-            </div>
-          )}
-        </div>
-      </FormControl>
-      {fieldState.error ? (
-        <p className="text-sm text-red-600 mt-1">
-          Please select a source type to continue.
-        </p>
-      ) : (
-        <FormDescription className="text-xs text-gray-600">
-          The type of data source you want to connect to
-        </FormDescription>
-      )}
-    </FormItem>
-  )}
-/>
+                control={form.control}
+                name="sourceName"
+                render={({ field, fieldState }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Source Name</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="Enter a name for this data source"
+                          {...field}
+                          className={cn(
+                            "!bg-white !text-gray-900 placeholder:!text-gray-500 pr-10",
+                            fieldState.error
+                              ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
+                              : "border-gray-200"
+                          )}
+                        />
+                        {fieldState.error && (
+                          <div className="absolute right-2 top-2.5 text-red-500">
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    {fieldState.error ? (
+                      <p className="text-sm text-red-600 mt-1">
+                        The source name you entered is required. Please enter a valid name.
+                      </p>
+                    ) : (
+                      <FormDescription className="text-xs text-gray-600">
+                        A unique and descriptive name for your data source
+                      </FormDescription>
+                    )}
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sourceType"
+                render={({ field, fieldState }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm font-medium text-gray-700">Source Type</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Select
+                          onValueChange={(val) => {
+                            field.onChange(val);
+                            handleSourceTypeChange(val);
+                          }}
+                          value={field.value}
+                        >
+                          <SelectTrigger
+                            className={cn(
+                              "!bg-white !text-gray-900 placeholder:!text-gray-500 pr-10",
+                              fieldState.error
+                                ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
+                                : "border-gray-200"
+                            )}
+                          >
+                            <SelectValue placeholder="Select source type" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectItem value="sql" className="text-gray-900">SQL Database</SelectItem>
+                            <SelectItem value="oracle" className="text-gray-900">Oracle DB</SelectItem>
+                            <SelectItem value="postgresql" className="text-gray-900">PostgreSQL</SelectItem>
+                            <SelectItem value="mongodb" className="text-gray-900">MongoDB</SelectItem>
+                            <SelectItem value="files" className="text-gray-900">Files</SelectItem>
+                            <SelectItem value="blob" className="text-gray-900">Blob Storage</SelectItem>
+                            <SelectItem value="rest" className="text-gray-900">REST API</SelectItem>
+                            <SelectItem value="datawarehouse" className="text-gray-900">Data Warehouse</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {fieldState.error && (
+                          <div className="absolute right-2 top-2.5 text-red-500">
+                          </div>
+                        )}
+                      </div>
+                    </FormControl>
+                    {fieldState.error ? (
+                      <p className="text-sm text-red-600 mt-1">
+                        Please select a source type to continue.
+                      </p>
+                    ) : (
+                      <FormDescription className="text-xs text-gray-600">
+                        The type of data source you want to connect to
+                      </FormDescription>
+                    )}
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -2896,9 +2928,8 @@ function handleTestConnection() {
           />
           {/* Status text */}
           <span
-            className={`text-sm font-medium w-[40px] text-right ${
-              sourceStatus === "Active" ? "text-green-600" : "text-red-500"
-            }`}
+            className={`text-sm font-medium w-[40px] text-right ${sourceStatus === "Active" ? "text-green-600" : "text-red-500"
+              }`}
           >
             {sourceStatus}
           </span>
@@ -2975,7 +3006,7 @@ function handleTestConnection() {
               onClick={handleSaveSource}
               className="bg-[#2196F3] hover:bg-[#1976D2] text-white"
             >
-              Save Source
+              {mode === "edit" ? "Edit Source" : "Save Source"}
             </Button>
           )}
         </div>

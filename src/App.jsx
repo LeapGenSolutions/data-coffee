@@ -26,8 +26,14 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Home} />
-      <Route path="/admin" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
-      <Route path="/admin-panel" component={hasBaristaRole ? AdminPanel : NotAuthorized} />
+      <Route path="/admin" component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route path="/admin/source" component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route path="/admin/source/edit/:id" component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
+      <Route path="/admin-panel" component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
       <Route path="/user-management" component={UserManagementPage} />
       <Route path="/user" component={UserManagementPage} />
       <Route path="/control-panel" component={ControlPanel} />
@@ -68,14 +74,14 @@ function Main() {
         }
       });
   }
-  
+
   useEffect(() => {
     if (isAuthenticated) {
       requestProfileData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
-  
+
   useEffect(() => {
     if (isAuthenticated && accounts.length > 0 && workspaces.length === 0) {
       dispatch(fetchWorkspaces(accounts[0].username));

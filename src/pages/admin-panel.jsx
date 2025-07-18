@@ -1,20 +1,37 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { StatisticsCards } from "../components/statistics-cards";
 import { SourceForm } from "../components/source-form";
 import SourceList from "../components/source-list";
 import { ReportGrid } from "../components/report-grid";
 import DashboardLayout from "../layouts/dashboard-layout";
-import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
+import { useLocation } from "wouter";
 
 export default function AdminPanel() {
-  const [showSourceForm, setShowSourceForm] = useState(false);
+  const [location, setLocation] = useLocation();
+  const [sources, setSources] = useState([]);
+
+  const isAdd = location === "/admin/source";
+  const isEdit = location.startsWith("/admin/source/edit/");
+  const editingId = isEdit ? location.split("/").pop() : null;
+
 
   //const currentUserEmail = useSelector((state) => state.me.me?.email);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const [selectedWorkspace, setSelectedWorkspace] = useState([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState(() => workspaces[0] || []);
+  const { sources: fetchedSources, isLoading, error, refetch } = useFetchSources(selectedWorkspace?.id);
+  
+  useEffect(() => {
+    if (!isLoading) {
+      setSources(fetchedSources);
+    }
+  }, [isLoading, fetchedSources]);
+
+  const editingSource = isEdit
+    ? sources.find((s) => String(s.id) === editingId)
+    : null;
   //console.log("Selected workspace ID:", selectedWorkspace?.id);
 
   // Set default workspace
@@ -25,17 +42,10 @@ export default function AdminPanel() {
   }, [workspaces, selectedWorkspace?.id]);
 
   // Fetch data sources from Cosmos
-  const { sources, isLoading, error, refetch } = useFetchSources(selectedWorkspace?.id);
 
   const handleSourceSaved = () => {
-    console.log("AdminPanel: New source saved. Triggering refetch.");
-    refetch(); // re-fetch from Cosmos
-  };
-
-  const handleEditSource = (source) => {
-    console.log("Editing source:", source);
-    setShowSourceForm(true);
-    // optionally set source in state if SourceForm supports editing
+    refetch();
+    setLocation("/admin");
   };
 
   const handleDeleteSource = () => {
@@ -59,26 +69,27 @@ export default function AdminPanel() {
               Manage system settings and users here. Configure data sources and authentication methods.
             </p>
 
-            {showSourceForm ? (
-              <ErrorBoundary>
-                <SourceForm
-                  onComplete={() => {
-                    setShowSourceForm(false);
-                    handleSourceSaved();
-                  }}
-                  onCancel={() => setShowSourceForm(false)}
-                  currentWorkspace={selectedWorkspace}
-                />
-              </ErrorBoundary>
+            {isAdd || isEdit ? (
+              <SourceForm
+                initialSource={editingSource}
+                mode={isEdit ? "edit" : "add"}
+                onSourceSaved={() => {
+                  handleSourceSaved();
+                }}
+                onCancel={() => {
+                  setLocation("/admin");
+                }}
+                currentWorkspace={selectedWorkspace}
+              />
             ) : isLoading ? (
               <div className="text-gray-500">Loading sources...</div>
             ) : error ? (
               <div className="text-red-500">Failed to load sources</div>
             ) : (
               <SourceList
-                sources={sources}
-                onAddSource={() => setShowSourceForm(true)}
-                onEditSource={handleEditSource}
+                sources={fetchedSources}
+                onAddSource={() => setLocation("/admin/source")}
+                onEditSource={(source) => setLocation(`/admin/source/edit/${source.id}`)}
                 onDeleteSource={handleDeleteSource}
                 selectedWorkspace={selectedWorkspace}
                 setSelectedWorkspace={setSelectedWorkspace}
