@@ -38,7 +38,10 @@ import {
 } from "../components/ui/pagination";
 import { useToast } from "../hooks/use-toast";
 
-export default function SourceList({ sources = [], onAddSource, onEditSource, onDeleteSource }) {
+export default function SourceList({ 
+  sources = [], onAddSource, onEditSource, 
+  onDeleteSource, selectedWorkspace, setSelectedWorkspace
+}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -161,14 +164,6 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
 
   // Workspace dropdown state (Redux)
   const workspaces = useSelector((state) => state.workspaces.workspaces) || [];
-  const [selectedWorkspace, setSelectedWorkspace] = useState(() => workspaces[0]?.id || "");
-  // If workspaces change and selectedWorkspace is not in the list, update it
-  React.useEffect(() => {
-    if (workspaces.length > 0 && !workspaces.find(ws => ws.id === selectedWorkspace)) {
-      setSelectedWorkspace(workspaces[0].id);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaces]);
 
   return (
     <div className="space-y-4">
@@ -185,8 +180,11 @@ ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : '
           <div>
             <select
               className="border border-gray-300 rounded-lg px-3 py-2 text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
-              value={selectedWorkspace}
-              onChange={e => setSelectedWorkspace(e.target.value)}
+              value={selectedWorkspace?.id || ""}
+              onChange={e => {
+                const ws = workspaces.find(w => w.id === e.target.value);
+                setSelectedWorkspace(ws || "");
+              }}
               disabled={workspaces.length === 0}
             >
               {workspaces.length === 0 ? (

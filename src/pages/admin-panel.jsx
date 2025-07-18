@@ -5,6 +5,7 @@ import { SourceForm } from "../components/source-form";
 import SourceList from "../components/source-list";
 import { ReportGrid } from "../components/report-grid";
 import DashboardLayout from "../layouts/dashboard-layout";
+import { useSelector } from "react-redux";
 import { useLocation } from "wouter";
 
 
@@ -20,6 +21,16 @@ export default function AdminPanel() {
   ? sources.find((s) => String(s.id) === editingId)
   : null;
 
+  // Workspace selection state (shared with SourceForm and SourceList)
+  const [selectedWorkspace, setSelectedWorkspace] = useState([]);
+  const workspaces = useSelector((state) => state.workspaces.workspaces) || [];
+  // If workspaces change and selectedWorkspace is not in the list, update it
+  React.useEffect(() => {
+    if (workspaces.length > 0 && !workspaces.find(ws => ws.id === selectedWorkspace.id)) {
+      setSelectedWorkspace(workspaces[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaces]);
 
   const handleSourceSaved = (savedSource) => {
   setSources((prev) => {
