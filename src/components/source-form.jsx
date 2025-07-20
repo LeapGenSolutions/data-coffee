@@ -153,23 +153,13 @@ const getValidationSchema = (sourceType, location) => {
         authType: z.string().optional(),
       })
       .superRefine((data, ctx) => {
-        if (data.cloudProvider === "azure") {
-          if (!data.connectionString || data.connectionString.trim() === "") {
-            ctx.addIssue({
-              path: ["connectionString"],
-              message: "Azure Connection String is required",
-              code: z.ZodIssueCode.custom,
-            });
-          }
-        } else {
-          if (!data.authType || data.authType.trim() === "") {
+        if (!data.authType || data.authType.trim() === "") {
             ctx.addIssue({
               path: ["authType"],
               message: "Auth type is required",
               code: z.ZodIssueCode.custom,
             });
           }
-        }
       });
   }
 
@@ -306,7 +296,6 @@ export function SourceForm({ mode = "add", initialSource,
   const [selectionMode, setSelectionMode] = useState("all");
   const [selectedTables, setSelectedTables] = useState([]);
   const [expandedTables, setExpandedTables] = useState([]);
-  const [selectedColumns, setSelectedColumns] = useState({});
   const [customQuery, setCustomQuery] = useState("");
   const [tableSearchQuery, setTableSearchQuery] = useState("");
   // For Azure Blob file listing
@@ -400,127 +389,12 @@ export function SourceForm({ mode = "add", initialSource,
     watchCloudProvider
   ]);
 
-  // Mock data for demonstration
-  const availableTables = [
-    "customers",
-    "orders",
-    "products",
-    "inventory",
-    "suppliers",
-    "transactions",
-    "user_accounts",
-    "payment_methods",
-    "shipping_addresses",
-    "customer_reviews",
-    "product_categories",
-    "discount_codes",
-  ];
-
-  const tableColumns = {
-    customers: [
-      "customer_id",
-      "first_name",
-      "last_name",
-      "email",
-      "phone",
-      "address",
-      "city",
-      "state",
-      "zip_code",
-    ],
-    orders: [
-      "order_id",
-      "customer_id",
-      "order_date",
-      "total_amount",
-      "status",
-      "shipping_address",
-    ],
-    products: [
-      "product_id",
-      "name",
-      "description",
-      "price",
-      "category_id",
-      "stock_quantity",
-    ],
-    inventory: [
-      "inventory_id",
-      "product_id",
-      "quantity",
-      "warehouse_location",
-      "last_updated",
-    ],
-    suppliers: [
-      "supplier_id",
-      "name",
-      "contact_person",
-      "email",
-      "phone",
-      "address",
-    ],
-    transactions: [
-      "transaction_id",
-      "order_id",
-      "payment_method",
-      "amount",
-      "transaction_date",
-      "status",
-    ],
-    user_accounts: [
-      "user_id",
-      "username",
-      "email",
-      "password_hash",
-      "created_at",
-      "last_login",
-    ],
-    payment_methods: [
-      "payment_id",
-      "customer_id",
-      "type",
-      "card_number",
-      "expiry_date",
-      "cardholder_name",
-    ],
-    shipping_addresses: [
-      "address_id",
-      "customer_id",
-      "street",
-      "city",
-      "state",
-      "zip_code",
-      "country",
-    ],
-    customer_reviews: [
-      "review_id",
-      "customer_id",
-      "product_id",
-      "rating",
-      "comment",
-      "review_date",
-    ],
-    product_categories: [
-      "category_id",
-      "name",
-      "description",
-      "parent_category_id",
-    ],
-    discount_codes: [
-      "code_id",
-      "code",
-      "discount_percent",
-      "valid_from",
-      "valid_until",
-      "usage_limit",
-    ],
-  };
-
   const saveSourceMutation = useSaveSource();
   const patchSourceMutation = usePatchSource();  
 
   function handleSaveSource() {
     const currentData = form.getValues();
+    console.log("Saving source with data:", currentData);
 
     // Create a new source object with all the form data
     const newSource = {
@@ -532,7 +406,6 @@ export function SourceForm({ mode = "add", initialSource,
       customPrompt: currentData.customPrompt || "",
       dataSelectionMode: currentData.dataSelectionMode || "all",
       selectedTables: currentData.selectedTables || selectedTables || [],
-      selectedColumns: currentData.selectedColumns || selectedColumns || [],
       customQuery: currentData.customPrompt || "",
       configuration: currentData,
       status: sourceStatus,
@@ -541,6 +414,8 @@ export function SourceForm({ mode = "add", initialSource,
       workspaceId: currentWorkspace.id,
       workspaceName: currentWorkspace.workspaceName
     };
+    console.log("New source object:", newSource);
+    
 
     if (!user || !user.email) {
       toast({
@@ -644,7 +519,6 @@ export function SourceForm({ mode = "add", initialSource,
       customPrompt: data.customPrompt || "",
       dataSelectionMode: selectionMode || "all",
       selectedTables: selectedTables || [],
-      selectedColumns: selectedColumns || {},
       customQuery: customQuery || "",
       configuration: data, // Store all form data as configuration
       status: "Active",
@@ -990,51 +864,7 @@ export function SourceForm({ mode = "add", initialSource,
 
     const terminology = getItemTerminology(currentSourceType);
 
-    // Compute filtered tables based on search query
-    const filteredTables = availableTables.filter((table) =>
-      table.toLowerCase().includes(tableSearchQuery.toLowerCase()),
-    );
 
-    // Toggle table selection
-    const toggleTable = (table, isSelected) => {
-      if (isSelected) {
-        // Add table to selected tables
-        setSelectedTables([...selectedTables, table]);
-
-        // Expand the table immediately upon selection
-        if (!expandedTables.includes(table)) {
-          setExpandedTables([...expandedTables, table]);
-        }
-
-        // Select all columns by default when a table is selected
-        setSelectedColumns({
-          ...selectedColumns,
-          [table]: [...(tableColumns[table] || [])],
-        });
-      } else {
-        // Remove table from selected tables
-        setSelectedTables(selectedTables.filter((t) => t !== table));
-
-        // Remove selected columns for this table
-        const newSelectedColumns = { ...selectedColumns };
-        delete newSelectedColumns[table];
-        setSelectedColumns(newSelectedColumns);
-      }
-    };
-
-    // Toggle table expansion
-    const toggleExpand = (table) => {
-      if (expandedTables.includes(table)) {
-        setExpandedTables(expandedTables.filter((t) => t !== table));
-      } else {
-        setExpandedTables([...expandedTables, table]);
-      }
-    };
-
-    // Count selected columns for a table
-    const getSelectedColumnCount = (table) => {
-      return (selectedColumns[table] || []).length;
-    };
 
     return (
       <div className="space-y-6">
@@ -1254,20 +1084,6 @@ export function SourceForm({ mode = "add", initialSource,
                                   {expandedTables.includes(sheet) ? "Hide Columns" : "Show Columns"}
                                 </button>
                               </div>
-                              {expandedTables.includes(sheet) && (
-                                <div className="ml-6 grid grid-cols-2 gap-2 mt-2">
-                                  {(tableColumns[sheet] || ["Column A", "Column B", "Column C", "Column D"]).map(column => (
-                                    <label key={column} className="flex items-center space-x-2">
-                                      <input
-                                        type="checkbox"
-                                        defaultChecked
-                                        className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                      />
-                                      <span className="text-xs text-gray-700">{column}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -1299,17 +1115,8 @@ export function SourceForm({ mode = "add", initialSource,
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setSelectedTables([...availableTables]);
-                        // Also select all columns for all tables
-                        const allColumns = {};
-                        availableTables.forEach((table) => {
-                          if (tableColumns[table]) {
-                            allColumns[table] = [...tableColumns[table]];
-                          }
-                        });
-                        setSelectedColumns(allColumns);
-                        // Expand all tables
-                        setExpandedTables([...availableTables]);
+                        console.log("Select All Tables Clicked");
+                        
                       }}
                       className="text-xs border-gray-200 text-gray-600 hover:bg-blue-50"
                     >
@@ -1346,205 +1153,11 @@ export function SourceForm({ mode = "add", initialSource,
                   </div>
                 </div>
 
-                <div className="bg-white rounded-md border border-gray-200 max-h-96 overflow-y-auto">
-                  {/* Table selection */}
-                  <div className="divide-y divide-gray-200">
-                    {/* Filter tables based on search query */}
-                    {filteredTables.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        No {terminology.plural} match your search. Try a
-                        different query.
-                      </div>
-                    ) : (
-                      filteredTables.map((table) => (
-                        <div key={table} className="p-0">
-                          <div className="flex items-center justify-between p-3 hover:bg-blue-50">
-                            <div className="flex items-center space-x-2">
-                              <input
-                                type="checkbox"
-                                id={`table-${table}`}
-                                checked={selectedTables.includes(table)}
-                                onChange={(e) =>
-                                  toggleTable(table, e.target.checked)
-                                }
-                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                              />
-                              <label
-                                htmlFor={`table-${table}`}
-                                className="font-medium text-gray-900 flex items-center"
-                              >
-                                {table}
-                                {selectedTables.includes(table) && (
-                                  <span className="ml-2 text-xs bg-blue-50 text-blue-600 py-0.5 px-2 rounded-full border border-blue-200">
-                                    {getSelectedColumnCount(table)}{" "}
-                                    {terminology.fields} selected
-                                  </span>
-                                )}
-                              </label>
-                            </div>
-
-                            {selectedTables.includes(table) && (
-                              <button
-                                type="button"
-                                onClick={() => toggleExpand(table)}
-                                className="text-gray-500 hover:text-blue-600"
-                              >
-                                {expandedTables.includes(table) ? (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5"
-                                    viewBox="0 0 20 20"
-                                    fill="currentColor"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                )}
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Table details section - conditionally visible */}
-                          {selectedTables.includes(table) &&
-                            expandedTables.includes(table) &&
-                            tableColumns[table] && (
-                              <div className="bg-blue-50 p-3 border-t border-gray-200">
-                                <div className="flex justify-between items-center mb-4">
-                                  <p className="text-xs font-medium text-gray-900">
-                                    {terminology.fields
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      terminology.fields.slice(1)}{" "}
-                                    and Transformations:
-                                  </p>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => toggleTable(table, false)}
-                                    className="text-xs h-6 px-2 border border-gray-200 text-gray-600 hover:bg-blue-100"
-                                  >
-                                    Unselect{" "}
-                                    {terminology.single
-                                      .charAt(0)
-                                      .toUpperCase() +
-                                      terminology.single.slice(1)}
-                                  </Button>
-                                </div>
-
-                                <div className="bg-white rounded border border-gray-200 p-3">
-                                  <div className="space-y-3">
-                                    <div className="grid grid-cols-6 gap-3 pb-2 border-b border-gray-200">
-                                      <div className="text-xs font-medium text-gray-900 col-span-3">
-                                        {terminology.field
-                                          .charAt(0)
-                                          .toUpperCase() +
-                                          terminology.field.slice(1)}{" "}
-                                        Name
-                                      </div>
-                                      <div className="text-xs font-medium text-gray-900 text-center">
-                                        Tokenize
-                                      </div>
-                                      <div className="text-xs font-medium text-gray-900 text-center">
-                                        Masking
-                                      </div>
-                                      <div className="text-xs font-medium text-gray-900 text-center">
-                                        Anonymize
-                                      </div>
-                                    </div>
-
-                                    {tableColumns[table].map((column) => (
-                                      <div
-                                        key={`${table}-${column}`}
-                                        className="grid grid-cols-6 gap-3 items-center py-1"
-                                      >
-                                        <div className="text-xs text-gray-900 col-span-3">
-                                          {column}
-                                        </div>
-                                        <div className="text-center">
-                                          <input
-                                            type="radio"
-                                            id={`transform-tokenize-${table}-${column}`}
-                                            name={`transform-${table}-${column}`}
-                                            value="tokenize"
-                                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                          />
-                                        </div>
-                                        <div className="text-center">
-                                          <input
-                                            type="radio"
-                                            id={`transform-masking-${table}-${column}`}
-                                            name={`transform-${table}-${column}`}
-                                            value="masking"
-                                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                          />
-                                        </div>
-                                        <div className="text-center">
-                                          <input
-                                            type="radio"
-                                            id={`transform-anonymize-${table}-${column}`}
-                                            name={`transform-${table}-${column}`}
-                                            value="anonymize"
-                                            className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                                          />
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
                 <div className="flex items-center justify-between mt-3">
                   <span className="text-sm text-gray-900">
                     {selectedTables.length} {terminology.plural} selected
                   </span>
-                  <div>
-                    <span className="text-sm text-gray-900">
-                      Total {terminology.fields}:{" "}
-                      {Object.values(selectedColumns).reduce(
-                        (acc, cols) => acc + cols.length,
-                        0,
-                      )}
-                    </span>
-                  </div>
                 </div>
-
-                {selectedTables.length > 0 && (
-                  <div className="bg-blue-50 p-3 rounded-md mt-3 border border-blue-200">
-                    <p className="text-sm text-gray-900 font-medium">
-                      Selected Data Summary
-                    </p>
-                    <ul className="mt-2 text-xs text-gray-600 pl-5 list-disc space-y-1">
-                      {selectedTables.map((table) => (
-                        <li key={`summary-${table}`}>
-                          {table}: {getSelectedColumnCount(table)}{" "}
-                          {terminology.fields} selected
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
             )}
 
@@ -1682,27 +1295,7 @@ export function SourceForm({ mode = "add", initialSource,
                       <div key={table} className="p-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-gray-900">{table}</span>
-                          <span className="text-xs text-gray-500">
-                            {/* {getSelectedColumnCount ? getSelectedColumnCount(table) : 0} fields selected */}
-                          </span>
                         </div>
-                        {selectedColumns[table] && selectedColumns[table].length > 0 && (
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-600 mb-1">Selected Fields:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {selectedColumns[table].slice(0, 8).map((column) => (
-                                <span key={column} className="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">
-                                  {column}
-                                </span>
-                              ))}
-                              {selectedColumns[table].length > 8 && (
-                                <span className="text-xs text-gray-500">
-                                  +{selectedColumns[table].length - 8} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     ))}
                   </div>
@@ -2233,8 +1826,9 @@ export function SourceForm({ mode = "add", initialSource,
 
     // Files Configuration
     if (currentSourceType === "files") {
-      let fields;
       const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
+      const authType = form.watch("authType");
+      let fields = [];
       if (currentLocation === "on-prem") {
         fields = [
           {
@@ -2259,6 +1853,34 @@ export function SourceForm({ mode = "add", initialSource,
             placeholder: "/mnt/data (if containerized)",
             description: "Container mount path if using containerized deployment"
           },
+          {
+            name: "authType",
+            label: "Auth Type",
+            type: "select",
+            placeholder: "Select authentication type",
+            options: [
+              { value: "iam", label: "IAM Role" },
+              { value: "sas", label: "SAS Token" },
+              { value: "keyvault", label: "Azure Key Vault" }
+            ]
+          },
+          // Show connection string if SAS selected, or key vault name if keyvault selected
+          ...(authType === "sas"
+            ? [{
+                name: "connectionString",
+                label: "Connection String",
+                type: "textarea",
+                placeholder: "Paste your SAS connection string here",
+                description: "SAS Token connection string."
+              }]
+            : authType === "keyvault"
+              ? [{
+                  name: "keyVaultName",
+                  label: "Key Vault Name",
+                  placeholder: "Enter Azure Key Vault name",
+                  description: "Azure Key Vault resource name."
+                }]
+              : []),
           {
             name: "fileFormat",
             label: "File Format",
@@ -2288,6 +1910,15 @@ export function SourceForm({ mode = "add", initialSource,
               { value: "gcs", label: "Google Cloud Storage" }
             ]
           },
+          // Show Storage Account Name before Container Name if Azure
+          ...(isAzure
+            ? [{
+                name: "storageAccountName",
+                label: "Storage Account Name",
+                placeholder: "Enter Azure Storage Account Name",
+                description: "Name of your Azure Storage Account."
+              }]
+            : []),
           {
             name: "containerName",
             label: "Container Name",
@@ -2300,17 +1931,7 @@ export function SourceForm({ mode = "add", initialSource,
             placeholder: "data/files/ ",
             description: "Optional path prefix within the container"
           },
-        ];
-        if (isAzure) {
-          fields.push({
-            name: "connectionString",
-            label: "Azure Connection String",
-            type: "textarea",
-            placeholder: "Paste your Azure Blob Storage connection string here",
-            description: "Full Azure Blob Storage connection string."
-          });
-        } else {
-          fields.push({
+          {
             name: "authType",
             label: "Auth Type",
             type: "select",
@@ -2320,22 +1941,39 @@ export function SourceForm({ mode = "add", initialSource,
               { value: "sas", label: "SAS Token" },
               { value: "keyvault", label: "Azure Key Vault" }
             ]
-          });
-        }
-        fields.push({
-          name: "fileFormat",
-          label: "File Format",
-          type: "select",
-          placeholder: "Select file format",
-          options: [
-            { value: "csv", label: "CSV" },
-            { value: "json", label: "JSON" },
-            { value: "png", label: "PNG" },
-            { value: "jpeg", label: "JPEG" },
-            { value: "pdf", label: "PDF" },
-            { value: "jpg", label: "JPG" }
-          ]
-        });
+          },
+          // Show connection string if SAS selected, or key vault name if keyvault selected
+          ...(authType === "sas"
+            ? [{
+                name: "connectionString",
+                label: "Connection String",
+                type: "textarea",
+                placeholder: "Paste your SAS connection string here",
+                description: "SAS Token connection string."
+              }]
+            : authType === "keyvault"
+              ? [{
+                  name: "keyVaultName",
+                  label: "Key Vault Name",
+                  placeholder: "Enter Azure Key Vault name",
+                  description: "Azure Key Vault resource name."
+                }]
+              : []),
+          {
+            name: "fileFormat",
+            label: "File Format",
+            type: "select",
+            placeholder: "Select file format",
+            options: [
+              { value: "csv", label: "CSV" },
+              { value: "json", label: "JSON" },
+              { value: "png", label: "PNG" },
+              { value: "jpeg", label: "JPEG" },
+              { value: "pdf", label: "PDF" },
+              { value: "jpg", label: "JPG" }
+            ]
+          }
+        ];
       }
 
       // Render the Test Connection button for Azure Blob Storage
