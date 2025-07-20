@@ -1,4 +1,5 @@
 /* eslint-disable */
+import { useRunPipeline } from '../hooks/useRunPipeline';
 import { useState, useRef, useEffect } from "react";
 import {
   Plus,
@@ -448,17 +449,31 @@ function UserManagement() {
     };
   };
 
-  const handleManualRerun = (pipeline) => {
+  const runPipelineMutation = useRunPipeline();
+
+  const handleRunPipeline = (pipeline) => {
     setReviewPromptPipeline(pipeline);
-    setShowRunPipelineModal(true);
-    setRunPipelineStatus("running");
-    if (runTimeoutRef.current) clearTimeout(runTimeoutRef.current);
-    runTimeoutRef.current = setTimeout(() => {
-      setRunPipelineStatus("completed");
-      setPipelines(users => users.map(p =>
-        p.id === pipeline.id ? { ...p, status: "Completed" } : p
-      ));
-    }, 2500);
+    // setShowRunPipelineModal(true);
+    // setRunPipelineStatus("running");
+
+    // Call Databricks pipeline run
+    runPipelineMutation.mutate({
+      pipeline_id: pipeline.id,
+      user_id: pipeline.user_id,
+      pipeline_name: pipeline.name
+    }, {
+      onSuccess: (data) => {
+        setRunPipelineStatus("completed");
+        setPipelines(users => users.map(p =>
+          p.id === pipeline.id ? { ...p, status: "Completed" } : p
+        ));
+        // Optionally show a toast or handle response
+      },
+      onError: (error) => {
+        setRunPipelineStatus("failed");
+        // Optionally show a toast for error
+      }
+    });
   };
 
   const handleEditPipeline = (pipeline) => {
@@ -1090,10 +1105,10 @@ function UserManagement() {
                             <Copy className="h-4 w-4 text-blue-500" /> Clone
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleManualRerun(pipeline)}
+                            onClick={() => handleRunPipeline(pipeline)}
                             className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
                           >
-                            <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run Manually
+                            <RotateCcw className="h-4 w-4 text-blue-500" /> Run Manually
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
