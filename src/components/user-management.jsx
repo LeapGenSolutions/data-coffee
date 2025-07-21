@@ -1018,12 +1018,12 @@ function UserManagement() {
                 <TableHead className="text-white font-medium">
                   Technique
                 </TableHead>
-                <TableHead className="text-white font-medium">
+                {/* <TableHead className="text-white font-medium">
                   Agent
                 </TableHead>
                 <TableHead className="text-white font-medium">
                   Schedule
-                </TableHead>
+                </TableHead> */}
                 <TableHead className="text-white font-medium">Status</TableHead>
                 <TableHead className="text-white font-medium">
                   Created
@@ -1064,15 +1064,15 @@ function UserManagement() {
                     <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
                       {pipeline.destination}
                     </TableCell>
-                    <TableCell className="p-4 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
-                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                    {/* <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
                       {pipeline.processingAgent || "Not specified"}
-                    </TableCell>
-                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    </TableCell> */}
+                    {/* <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
                       {pipeline.schedule || "Not configured"}
-                    </TableCell>
-                    <TableCell className="p-4 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
-                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
+                    </TableCell> */}
+                    <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
                       {pipeline.created}
                     </TableCell>
                     <TableCell>
@@ -1156,8 +1156,8 @@ function UserManagement() {
                   <div><span className="font-semibold">Source:</span> {viewPipeline.source}</div>
                   <div><span className="font-semibold">Destination:</span> {viewPipeline.destination}</div>
                   <div><span className="font-semibold">Technique:</span> {viewPipeline.technique}</div>
-                  <div><span className="font-semibold">Agent:</span> {viewPipeline.processingAgent || "Not specified"}</div>
-                  <div><span className="font-semibold">Schedule:</span> {viewPipeline.schedule || "Not configured"}</div>
+                  {/* <div><span className="font-semibold">Agent:</span> {viewPipeline.processingAgent || "Not specified"}</div>
+                  <div><span className="font-semibold">Schedule:</span> {viewPipeline.schedule || "Not configured"}</div> */}
                   <div><span className="font-semibold">Status:</span> {viewPipeline.status}</div>
                   <div><span className="font-semibold">Created:</span> {viewPipeline.created}</div>
                 </div>
