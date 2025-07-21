@@ -1055,24 +1055,24 @@ function UserManagement() {
                     key={pipeline.id}
                     className="bg-white hover:bg-gray-50 border-gray-200"
                   >
-                    <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-normal">
+                    <TableCell className="font-medium text-gray-900 p-4 text-sm whitespace-normal">
                       {pipeline.name}
                     </TableCell>
-                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
                       {pipeline.source}
                     </TableCell>
-                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
                       {pipeline.destination}
                     </TableCell>
-                    <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                    <TableCell className="p-4 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
                     <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
                       {pipeline.processingAgent || "Not specified"}
                     </TableCell>
                     <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
                       {pipeline.schedule || "Not configured"}
                     </TableCell>
-                    <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
-                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
+                    <TableCell className="p-4 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
                       {pipeline.created}
                     </TableCell>
                     <TableCell>
@@ -1113,7 +1113,7 @@ function UserManagement() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                    <TableCell className="whitespace-normal p-1 min-w-[100px] max-w-[140px] text-sm">
+                    <TableCell className="whitespace-normal p-4 min-w-[100px] max-w-[140px] text-sm flex justify-center items-center">
                       <Button
                         variant="outline"
                         size="sm"
