@@ -20,6 +20,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from "../components/ui/form";
 import {
   Select,
@@ -44,6 +45,7 @@ import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
 import { cn } from "../lib/utils";
 import { useSaveSource } from "../hooks/useSaveSource";
 import { usePatchSource } from "../hooks/usePatchSource.js";
+import { useFetchSourceTypes } from "../hooks/useFetchSourceTypes";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
 
@@ -290,6 +292,7 @@ export function SourceForm({ mode = "add", initialSource,
     setSelectedTables([]);
     setIsAzureFilesLoaded(false);
   }, [watchFileFormat, watchContainerName, watchPathPrefix]);
+  const { data: sourceTypes, isLoading, error } = useFetchSourceTypes();
 
   // Data selection state
   const [selectionMode, setSelectionMode] = useState("all");
@@ -1438,8 +1441,10 @@ export function SourceForm({ mode = "add", initialSource,
       </div>
     );
 
+    const normalizedSourceType = form.watch("sourceType")?.toLowerCase() || "";
+
     // SQL Database Configuration
-    if (currentSourceType === "sql") {
+    if (normalizedSourceType === "sql") {
       const fields =
         currentLocation === "on-prem"
           ? [
@@ -1558,7 +1563,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // Oracle Database Configuration
-    if (currentSourceType === "oracle") {
+    if (normalizedSourceType === "oracle") {
       const fields =
         currentLocation === "on-prem"
           ? [
@@ -1642,7 +1647,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // PostgreSQL Configuration
-    if (currentSourceType === "postgresql") {
+    if (normalizedSourceType === "postgresql") {
       const fields =
         currentLocation === "on-prem"
           ? [
@@ -1729,7 +1734,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // MongoDB Configuration
-    if (currentSourceType === "mongodb") {
+    if (normalizedSourceType === "mongodb") {
       const fields =
         currentLocation === "on-prem"
           ? [
@@ -1812,7 +1817,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // Files Configuration
-    if (currentSourceType === "files") {
+    if (normalizedSourceType === "files") {
       const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
       const authType = form.watch("authType");
       let fields = [];
@@ -2062,7 +2067,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // REST API Configuration
-    if (currentSourceType === "rest") {
+    if (normalizedSourceType === "rest") {
       const fields = currentLocation === "on-prem"
         ? [
           {
@@ -2155,7 +2160,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // Blob Storage Configuration (Cloud Only)
-    if (currentSourceType === "blob") {
+    if (normalizedSourceType === "blob") {
       const fields = [
         {
           name: "cloudProvider",
@@ -2226,7 +2231,7 @@ export function SourceForm({ mode = "add", initialSource,
     }
 
     // Data Warehouse Configuration
-    if (currentSourceType === "datawarehouse") {
+    if (normalizedSourceType === "datawarehouse") {
       const fields = currentLocation === "on-prem"
         ? [
           {
@@ -2406,51 +2411,53 @@ export function SourceForm({ mode = "add", initialSource,
                 render={({ field, fieldState }) => (
                   <FormItem>
                     <FormLabel className="text-sm font-medium text-gray-700">Source Type</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Select
-                          onValueChange={(val) => {
-                            field.onChange(val);
-                            handleSourceTypeChange(val);
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);  // no uppercase here
+                        handleSourceTypeChange(value);
+                      }}
+                    >
+                      <FormControl>
+                        <SelectTrigger
+                          className={cn(
+                            "!bg-white !text-gray-900 placeholder:!text-gray-500 pr-10",
+                            fieldState.error
+                              ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
+                              : "border-gray-200"
+                          )}
+                          style={{
+                            backgroundColor: "white !important",
+                            color: "#111827 !important",
                           }}
-                          value={field.value}
                         >
-                          <SelectTrigger
-                            className={cn(
-                              "!bg-white !text-gray-900 placeholder:!text-gray-500 pr-10",
-                              fieldState.error
-                                ? "border-red-500 ring-1 ring-red-500 focus:ring-red-500"
-                                : "border-gray-200"
-                            )}
-                          >
-                            <SelectValue placeholder="Select source type" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            <SelectItem value="sql" className="text-gray-900">SQL Database</SelectItem>
-                            <SelectItem value="oracle" className="text-gray-900">Oracle DB</SelectItem>
-                            <SelectItem value="postgresql" className="text-gray-900">PostgreSQL</SelectItem>
-                            <SelectItem value="mongodb" className="text-gray-900">MongoDB</SelectItem>
-                            <SelectItem value="files" className="text-gray-900">Files</SelectItem>
-                            <SelectItem value="blob" className="text-gray-900">Blob Storage</SelectItem>
-                            <SelectItem value="rest" className="text-gray-900">REST API</SelectItem>
-                            <SelectItem value="datawarehouse" className="text-gray-900">Data Warehouse</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {fieldState.error && (
-                          <div className="absolute right-2 top-2.5 text-red-500">
-                          </div>
+                          <SelectValue placeholder="Select source type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="bg-white">
+                        {isLoading ? (
+                          <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+                        ) : error ? (
+                          <div className="px-4 py-2 text-sm text-red-500">Failed to load</div>
+                        ) : Array.isArray(sourceTypes) && sourceTypes.length > 0 ? (
+                          sourceTypes.map((type) => (
+                            <SelectItem
+                              key={type.id}
+                              value={type.sourceKey}
+                              className="text-gray-900 hover:bg-gray-100 cursor-pointer"
+                            >
+                              {type.value}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <div className="px-4 py-2 text-sm text-gray-500">No source types available</div>
                         )}
-                      </div>
-                    </FormControl>
-                    {fieldState.error ? (
-                      <p className="text-sm text-red-600 mt-1">
-                        Please select a source type to continue.
-                      </p>
-                    ) : (
-                      <FormDescription className="text-xs text-gray-600">
-                        The type of data source you want to connect to
-                      </FormDescription>
-                    )}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription className="text-xs text-gray-600">
+                      The type of data source you want to connect to
+                    </FormDescription>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
