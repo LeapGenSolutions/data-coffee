@@ -1055,7 +1055,7 @@ function UserManagement() {
                     key={pipeline.id}
                     className="bg-white hover:bg-gray-50 border-gray-200"
                   >
-                    <TableCell className="font-medium text-gray-900 p-4 text-sm whitespace-normal">
+                    <TableCell className="font-medium text-gray-900 p-1 text-sm whitespace-nowrap overflow-hidden truncate w-40 cursor-pointer" title={pipeline.name}>
                       {pipeline.name}
                     </TableCell>
                     <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
