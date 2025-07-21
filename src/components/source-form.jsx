@@ -20,7 +20,6 @@ import {
   FormField,
   FormItem,
   FormLabel,
-  FormMessage,
 } from "../components/ui/form";
 import {
   Select,
@@ -55,7 +54,7 @@ const baseSchema = z.object({
   sourceName: z.string().min(1, "Source name is required"),
   sourceType: z.string().min(1, "Source type is required"),
   location: z.string().min(1, "Location is required"),
-  customPrompt: z.string().optional(),
+
 });
 
 
@@ -242,7 +241,7 @@ export function SourceForm({ mode = "add", initialSource,
       sourceName: "",
       sourceType: "",
       location: "on-prem",
-      customPrompt: "",
+
       dataSelectionMode: "",
     },
   });
@@ -275,7 +274,7 @@ export function SourceForm({ mode = "add", initialSource,
         sourceType: initialSource.type || "",
         location: initialSource.location || "",
         authType: initialSource.authType || "",
-        customPrompt: initialSource.customPrompt || "",
+
         ...initialSource.configuration,
         step: 1,
       });
@@ -403,7 +402,7 @@ export function SourceForm({ mode = "add", initialSource,
       type: currentData.sourceType || "unknown",
       location: location || currentData.location || "on-prem",
       authType: currentData.authType || "",
-      customPrompt: currentData.customPrompt || "",
+
       dataSelectionMode: currentData.dataSelectionMode || "all",
       selectedTables: currentData.selectedTables || selectedTables || [],
       customQuery: currentData.customPrompt || "",
@@ -476,7 +475,7 @@ export function SourceForm({ mode = "add", initialSource,
       sourceName: currentValues.sourceName,
       sourceType: value,
       location: currentValues.location,
-      customPrompt: currentValues.customPrompt,
+
     };
 
     form.reset(newValues);
@@ -497,7 +496,7 @@ export function SourceForm({ mode = "add", initialSource,
       sourceName: currentValues.sourceName,
       sourceType: currentValues.sourceType,
       location: value,
-      customPrompt: currentValues.customPrompt,
+
     };
 
     form.reset(newValues);
@@ -516,7 +515,7 @@ export function SourceForm({ mode = "add", initialSource,
       name: data.sourceName || "Untitled Source",
       type: data.sourceType || "unknown",
       location: location || data.location || "on-prem",
-      customPrompt: data.customPrompt || "",
+
       dataSelectionMode: selectionMode || "all",
       selectedTables: selectedTables || [],
       customQuery: customQuery || "",
@@ -1315,19 +1314,7 @@ export function SourceForm({ mode = "add", initialSource,
               </div>
             )}
 
-            {/* Custom Prompt */}
-            {data.customPrompt && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Custom Prompt</h4>
-                <div className="bg-white border border-gray-200 rounded-md p-3">
-                  <p className="text-sm text-gray-700">
-                    {data.customPrompt && data.customPrompt.trim().length > 0
-                      ? data.customPrompt
-                      : <span className="italic text-gray-400">No custom prompt provided.</span>}
-                  </p>
-                </div>
-              </div>
-            )}
+
 
             <div className="bg-white p-4 rounded-md border border-gray-200">
               <h4 className="text-md font-medium mb-2 text-gray-900 flex items-center gap-2">
@@ -1859,11 +1846,20 @@ export function SourceForm({ mode = "add", initialSource,
             type: "select",
             placeholder: "Select authentication type",
             options: [
-              { value: "iam", label: "IAM Role" },
+              { value: "basic", label: "Basic Authentication" },
               { value: "sas", label: "SAS Token" },
               { value: "keyvault", label: "Azure Key Vault" }
             ]
           },
+          // Show Variable Name if basic selected
+          ...(authType === "basic"
+            ? [{
+                name: "variableName",
+                label: "Variable Name",
+                placeholder: "Enter variable name",
+                description: "Variable name for basic authentication."
+              }]
+            : []),
           // Show connection string if SAS selected, or key vault name if keyvault selected
           ...(authType === "sas"
             ? [{
@@ -1875,10 +1871,10 @@ export function SourceForm({ mode = "add", initialSource,
               }]
             : authType === "keyvault"
               ? [{
-                  name: "keyVaultName",
-                  label: "Key Vault Name",
-                  placeholder: "Enter Azure Key Vault name",
-                  description: "Azure Key Vault resource name."
+                  name: "secretName",
+                  label: "Secret Name",
+                  placeholder: "Enter Azure Key Vault secret name",
+                  description: "Azure Key Vault secret name."
                 }]
               : []),
           {
@@ -1887,6 +1883,7 @@ export function SourceForm({ mode = "add", initialSource,
             type: "select",
             placeholder: "Select file format",
             options: [
+              { value: "all", label: "All Files" },
               { value: "csv", label: "CSV" },
               { value: "json", label: "JSON" },
               { value: "png", label: "PNG" },
@@ -1937,7 +1934,7 @@ export function SourceForm({ mode = "add", initialSource,
             type: "select",
             placeholder: "Select authentication type",
             options: [
-              { value: "iam", label: "IAM Role" },
+              { value: "basic", label: "Basic Authentication" },
               { value: "sas", label: "SAS Token" },
               { value: "keyvault", label: "Azure Key Vault" }
             ]
@@ -1953,10 +1950,10 @@ export function SourceForm({ mode = "add", initialSource,
               }]
             : authType === "keyvault"
               ? [{
-                  name: "keyVaultName",
-                  label: "Key Vault Name",
-                  placeholder: "Enter Azure Key Vault name",
-                  description: "Azure Key Vault resource name."
+                  name: "secretName",
+                  label: "Secret Name",
+                  placeholder: "Enter Azure Key Vault secret name",
+                  description: "Azure Key Vault secret name."
                 }]
               : []),
           {
@@ -2454,34 +2451,6 @@ export function SourceForm({ mode = "add", initialSource,
                         The type of data source you want to connect to
                       </FormDescription>
                     )}
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="customPrompt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium text-gray-700">
-                      Custom Prompt (Optional)
-                    </FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter a custom prompt for data processing..."
-                        {...field}
-                        className="!bg-white !text-gray-900 border-gray-200 focus:border-blue-500 focus:ring-blue-500 min-h-20 resize-none placeholder:!text-gray-500"
-                        style={{
-                          backgroundColor: "white !important",
-                          color: "#111827 !important",
-                        }}
-                      />
-                    </FormControl>
-                    <FormDescription className="text-xs text-gray-600">
-                      Provide specific instructions for data extraction or
-                      processing
-                    </FormDescription>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
