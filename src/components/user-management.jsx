@@ -106,7 +106,10 @@ function UserManagement() {
 
   // Fetch available sources for the selected workspace
   const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspace.id);
-  const { sources: pipelineSources, isLoading: pipelineLoading, error: pipelineError } = useFetchPipeline(selectedWorkspace.id);
+  const { sources: pipelineSources, 
+    isLoading: pipelineLoading, 
+    error: pipelineError, 
+    refetch: refetchPipelines } = useFetchPipeline(selectedWorkspace.id);
 
   // Set the first workspace when workspaces are loaded
   useEffect(() => {
@@ -126,6 +129,7 @@ function UserManagement() {
     destinationDatabaseId: "",
     techniques: [],
     status: "Active",
+    customPrompt: "",
   });
 
   // Use pipelineSources if available, otherwise fallback to users
@@ -278,6 +282,7 @@ function UserManagement() {
         label: "Tokenization",
       },
       masking: { className: "bg-[#FF9800] text-white", label: "Masking" },
+      generate: { className: "bg-[#FF9800] text-white", label: "Masking" },
     };
 
     const config = technique ? techniqueConfig[technique.toLowerCase()] : {
@@ -374,6 +379,7 @@ function UserManagement() {
         destinationDatabaseId: destinationType === "connection" ? "" : destId,
         technique: selectedTechniques.join(", "),
         processingAgent: selectedProcessingAgent,
+        customPrompt: newUser.customPrompt,
         schedule: runConfiguration.schedule,
         notifications: runConfiguration.notifications,
         status: newUser.status || "Active",
@@ -393,6 +399,7 @@ function UserManagement() {
             description: `${data.name} has been saved successfully.`,
             variant: "success",
           });
+          refetchPipelines();
         },
         onError: (error) => {
           toast({
@@ -402,14 +409,6 @@ function UserManagement() {
           });
         }
       });
-
-      if (isEditing && editPipeline) {
-        setPipelines(users => users.map(u => u.id === pipeline.id ? pipeline : u));
-        toast({ title: "Pipeline Updated", description: `${pipeline.name} has been updated.` });
-      } else {
-        setPipelines([...pipelines, pipeline]);
-        toast({ title: "Pipeline Created", description: `${pipeline.name} has been added to the system` });
-      }
       resetForm();
       setShowCreateUserDialog(false);
       setIsEditing(false);
@@ -967,7 +966,7 @@ function UserManagement() {
                           allowedAgents.push("Anonymization Agent");
                         }
                         allowedAgents.push("Classification Agent");
-                                                // Remove duplicates
+                        // Remove duplicates
                         allowedAgents = Array.from(new Set(allowedAgents));
                         return (
                           <Select value={selectedProcessingAgent} onValueChange={setSelectedProcessingAgent}>
@@ -983,6 +982,20 @@ function UserManagement() {
                         );
                       })()
                     )}
+                    {/* Custom Prompt Textarea */}
+                    <div className="mt-6">
+                      <label htmlFor="customPrompt" className="block text-gray-700 font-medium mb-2">Custom Prompt (optional)</label>
+                      <textarea
+                        id="customPrompt"
+                        className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        rows={4}
+                        value={newUser.customPrompt}
+                        onChange={e => setNewUser({ ...newUser, customPrompt: e.target.value })}
+                        maxLength={1000}
+                        placeholder="Enter a custom prompt for this pipeline (optional)"
+                      />
+                      <div className="text-xs text-gray-400 mt-1">Characters: {newUser?.customPrompt?.length}</div>
+                    </div>
                   </div>
                 </div>
               )}

@@ -11,7 +11,7 @@ export default function useFetchSources(workspaceID) {
   const queryFn = async () => {
     if (!currentUserEmail || !workspaceID) throw new Error('Missing user email or workspaceID');
     const response = await axios.get(
-        `${BACKEND_URL}/api/source/${encodeURIComponent(currentUserEmail)}/${encodeURIComponent(workspaceID)}`,
+        `${BACKEND_URL}/api/source/${encodeURIComponent(currentUserEmail)}/workspace/${encodeURIComponent(workspaceID)}`,
     );
     return response.data || [];
   };
