@@ -310,11 +310,6 @@ export function SourceForm({ mode = "add", initialSource,
     const blobPath = form.getValues("pathPrefix") || "";
     const fileType = form.getValues("fileFormat");
     if (!connectionString || !containerName || !fileType) {
-      toast({
-        title: "Missing Required Fields",
-        description: "Please provide connection string, container name, and file format.",
-        variant: "destructive",
-      });
       return;
     }
     console.log({
@@ -2025,11 +2020,6 @@ export function SourceForm({ mode = "add", initialSource,
 
           if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
-            toast({
-              title: "Missing Required Fields",
-              description: "Please provide both Azure Connection String and Container Name.",
-              variant: "destructive",
-            });
             return;
           }
 
