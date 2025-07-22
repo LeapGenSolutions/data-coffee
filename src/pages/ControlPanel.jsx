@@ -130,7 +130,7 @@ export default function ControlPanel() {
   const getStatusBadge = (status) => {
     const statusConfig = {
       running: { variant: "default", className: "bg-blue-100 text-blue-800", icon: Activity },
-      completed: { variant: "success", className: "bg-green-100 text-green-800 border border-green-400", icon: CheckCircle },
+      completed: { variant: "success", className: "bg-green-100 text-green-800", icon: CheckCircle },
       failed: { variant: "destructive", className: "bg-red-100 text-red-800", icon: AlertCircle },
       pending: { variant: "secondary", className: "bg-yellow-100 text-yellow-800", icon: Clock }
     };
@@ -140,8 +140,8 @@ export default function ControlPanel() {
 
     return (
       <Badge variant={config.variant} className={`${config.className} flex items-center gap-1`}>
-        <IconComponent className="h-4 w-4 text-green-600" />
-        <span className="text-green-700 font-semibold">{status === 'success' ? 'Completed' : status.charAt(0).toUpperCase() + status.slice(1)}</span>
+        <IconComponent/>
+        <span>{status === 'success' ? 'Completed' : status.charAt(0).toUpperCase() + status.slice(1)}</span>
       </Badge>
     );
   };
@@ -294,7 +294,7 @@ export default function ControlPanel() {
                             <td className="p-3 text-gray-800">{formatDateTime(item.pipeline_start_time)}</td>
                             <td className="p-3 text-gray-800">{formatDateTime(item.pipeline_end_time)}</td>
                             <td className="p-3">
-                              {getStatusBadge(item.status)}
+                              {getStatusBadge(item.pipeline_status)}
                             </td>
                             <td className="p-3 flex gap-2">
                               <Button size="icon" variant="outline" className="rounded-full">

@@ -61,7 +61,7 @@ import usePatchPipeline from '../hooks/usePatchPipeline';
 
 
 function UserManagement() {
-  
+
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -121,7 +121,9 @@ function UserManagement() {
   const [newUser, setNewUser] = useState({
     name: "",
     sourceDatabase: "",
+    sourceDatabaseId: "",
     destinationDatabase: "",
+    destinationDatabaseId: "",
     techniques: [],
     status: "Active",
   });
@@ -188,7 +190,7 @@ function UserManagement() {
       {
         onSuccess: (data) => {
           console.log(data);
-          
+
           setReviewPromptContent(data?.new_feedback_prompt);
           setReviewPromptPipeline(promptPipeline);
           setShowPromptReviewModal(true);
@@ -352,14 +354,24 @@ function UserManagement() {
         return;
       }
 
+      // Find source and destination IDs from availableSources
+      let sourceId = "", destId = "";
+      if (Array.isArray(availableSources)) {
+        const srcObj = availableSources.find(src => src?.configuration?.sourceName === newUser.sourceDatabase);
+        sourceId = srcObj?.id;
+        const dstObj = availableSources.find(src => src?.configuration?.sourceName === newUser.destinationDatabase);
+        destId = dstObj?.id || "";
+      }
+      console.log("Source ID:", sourceId);
+      console.log("Destination ID:", destId);
+
       const pipeline = {
         id: isEditing && editPipeline ? editPipeline.id : Date.now(),
         name: newUser.name,
         source: newUser.sourceDatabase,
-        destination:
-          destinationType === "connection"
-            ? connectionString
-            : newUser.destinationDatabase,
+        sourceDatabaseId: sourceId,
+        destination: destinationType === "connection" ? connectionString : newUser.destinationDatabase,
+        destinationDatabaseId: destinationType === "connection" ? "" : destId,
         technique: selectedTechniques.join(", "),
         processingAgent: selectedProcessingAgent,
         schedule: runConfiguration.schedule,
@@ -372,6 +384,8 @@ function UserManagement() {
         connectionString,
         enableSurroundAI,
       };
+      console.log(pipeline);
+      
       savePipeline.mutateAsync(pipeline, {
         onSuccess: (data) => {
           toast({
@@ -407,7 +421,9 @@ function UserManagement() {
     setNewUser({
       name: "",
       sourceDatabase: "",
+      sourceDatabaseId: "",
       destinationDatabase: "",
+      destinationDatabaseId: "",
       techniques: [],
       status: "Active",
     });
@@ -567,6 +583,8 @@ function UserManagement() {
     setNewUser({
       name: pipeline.name,
       sourceDatabase: pipeline.source,
+      sourceDatabaseId: pipeline.sourceDatabaseId || "",
+      destinationDatabaseId: pipeline.destinationDatabaseId || "",
       destinationDatabase: pipeline.destinationType === "dataset" ? pipeline.destination : "",
       techniques: pipeline.technique ? pipeline.technique.split(", ") : [],
       status: pipeline.status,
@@ -1322,7 +1340,7 @@ function UserManagement() {
                           </Button>
                         </span>
                       </div>
-                      
+
                       <div className="bg-blue-50 rounded-lg border border-blue-200 shadow p-5 flex items-start gap-4">
                         <span className="flex-shrink-0 bg-purple-100 rounded-full p-3 flex items-center justify-center">
                           <Sparkles className="h-6 w-6 text-purple-500" />
