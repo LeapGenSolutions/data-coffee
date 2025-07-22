@@ -93,6 +93,7 @@ export default function AdminPanel() {
                 onDeleteSource={handleDeleteSource}
                 selectedWorkspace={selectedWorkspace}
                 setSelectedWorkspace={setSelectedWorkspace}
+                onRefresh={refetch}
               />
             )}
           </TabsContent>

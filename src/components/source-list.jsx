@@ -8,7 +8,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  Database
+  Database,
+  RefreshCcw
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -41,7 +42,7 @@ import { SourceDetailsModal } from "./source-details-modal";
 
 export default function SourceList({
   sources=[], onAddSource, onEditSource,
-  onDeleteSource, selectedWorkspace, setSelectedWorkspace
+  onDeleteSource, selectedWorkspace, setSelectedWorkspace, onRefresh
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("sourceName");
@@ -189,13 +190,23 @@ export default function SourceList({
             </select>
           </div>
         </div>
-        <Button
-          onClick={onAddSource}
-          className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
-        >
-          <Plus className="h-4 w-4" />
-          Add Source
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={onRefresh}
+            variant="outline"
+            className="border-[#2196F3] text-[#2196F3] flex items-center gap-2 hover:bg-blue-50"
+          >
+            <RefreshCcw className="h-4 w-4" />
+            Refresh
+          </Button>
+          <Button
+            onClick={onAddSource}
+            className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
+          >
+            <Plus className="h-4 w-4" />
+            Add Source
+          </Button>
+        </div>
       </div>
 
       {filteredSources.length > 0 ? (
