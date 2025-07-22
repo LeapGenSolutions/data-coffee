@@ -385,7 +385,7 @@ function UserManagement() {
         enableSurroundAI,
       };
       console.log(pipeline);
-      
+
       savePipeline.mutateAsync(pipeline, {
         onSuccess: (data) => {
           toast({
@@ -948,7 +948,7 @@ function UserManagement() {
                       <h3 className="text-lg font-semibold text-gray-800">Select Processing Agent</h3>
                     </div>
                     <p className="text-sm text-gray-600 mb-4">
-                      Choose the engine or service that will perform data masking, redaction, anonymization, or tokenization.
+                      Choose the engine or service that will perform data masking, redaction, anonymization, tokenization, or classification.
                     </p>
                     {isEditing ? (
                       <>
@@ -956,18 +956,32 @@ function UserManagement() {
                         <div className="text-xs text-gray-500 mt-2">Agent cannot be changed during edit.</div>
                       </>
                     ) : (
-                      <Select value={selectedProcessingAgent} onValueChange={setSelectedProcessingAgent}>
-                        <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
-                          <SelectValue placeholder="Select a processing agent" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                          <SelectItem value="Redaction Agent">Redaction Agent</SelectItem>
-                          <SelectItem value="Tokenization Agent">Tokenization Agent</SelectItem>
-                          <SelectItem value="Anonymization Agent">Anonymization Agent</SelectItem>
-                          <SelectItem value="Custom Processing Agent">Custom Processing Agent</SelectItem>
-                          <SelectItem value="AI-Based Privacy Agent">AI-Based Privacy Agent</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      (() => {
+                        // Determine allowed agents based on selected techniques
+                        let allowedAgents = [];
+                        if (selectedTechniques.includes("Masking")) {
+                          allowedAgents.push("Redaction Agent");
+                        } if (selectedTechniques.includes("Tokenization")) {
+                          allowedAgents.push("Tokenization Agent");
+                        } if (selectedTechniques.includes("Anonymization")) {
+                          allowedAgents.push("Anonymization Agent");
+                        }
+                        allowedAgents.push("Classification Agent");
+                                                // Remove duplicates
+                        allowedAgents = Array.from(new Set(allowedAgents));
+                        return (
+                          <Select value={selectedProcessingAgent} onValueChange={setSelectedProcessingAgent}>
+                            <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
+                              <SelectValue placeholder="Select a processing agent" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white">
+                              {allowedAgents.map(agent => (
+                                <SelectItem key={agent} value={agent}>{agent}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })()
                     )}
                   </div>
                 </div>
