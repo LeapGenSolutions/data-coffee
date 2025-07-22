@@ -57,9 +57,11 @@ import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
 
 // Handler for Use Prompt button
 import { useSelector } from "react-redux";
+import usePatchPipeline from '../hooks/usePatchPipeline';
 
 
 function UserManagement() {
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -177,6 +179,7 @@ function UserManagement() {
   };
 
   const fetchCustomPrompt = useFetchCustomPrompt();
+  const patchPipeline = usePatchPipeline();
 
   function handleUsePromptClick() {
     if (!promptPipeline || !promptPipeline.id) return;
@@ -196,6 +199,53 @@ function UserManagement() {
         }
       }
     );
+  }
+
+  function handlePromptClick() {
+    setShowPromptReviewModal(false);
+    setIsApplyingPrompt(true);
+    // Update the pipeline's current prompt locally
+    const pipelineId = (reviewPromptPipeline?.id || promptPipeline?.id);
+
+    // Find the pipeline object to patch
+    const pipelineObj = (pipelines.find(p => p.id === pipelineId) || pipelineSources?.find(p => p.id === pipelineId));
+    // Get user email (assuming pipeline object has user_id or email field)
+    const userEmail = pipelineObj?.user_id || pipelineObj?.email;
+    if (pipelineObj && userEmail) {
+      // Patch the pipeline with the new prompt content
+      patchPipeline.mutate({
+        email: userEmail,
+        pipelineId: pipelineId,
+        pipeline: {
+          ...pipelineObj,
+          customPrompt: reviewPromptContent,
+        }
+      }, {
+        onSuccess: () => {
+          setTimeout(() => {
+            setIsApplyingPrompt(false);
+            setShowSuccessTransition(true);
+            setTimeout(() => {
+              setShowSuccessTransition(false);
+              setShowPromptAppliedModal(true);
+            }, 500);
+          }, 3000);
+        },
+        onError: (err) => {
+          setIsApplyingPrompt(false);
+          toast({ title: 'Failed to update pipeline', description: err?.message || 'Unknown error', variant: 'destructive' });
+        }
+      });
+    } else {
+      setTimeout(() => {
+        setIsApplyingPrompt(false);
+        setShowSuccessTransition(true);
+        setTimeout(() => {
+          setShowSuccessTransition(false);
+          setShowPromptAppliedModal(true);
+        }, 500);
+      }, 3000);
+    }
   }
 
   const getStatusBadge = (status) => {
@@ -1341,28 +1391,7 @@ function UserManagement() {
                 <Button variant="outline" onClick={() => setShowPromptReviewModal(false)}>Cancel</Button>
                 <Button
                   className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => {
-                    setShowPromptReviewModal(false);
-                    setIsApplyingPrompt(true);
-                    // Update the pipeline's current prompt
-                    const pipelineId = (reviewPromptPipeline?.id || promptPipeline?.id);
-                    setPipelinePrompts(prev => ({
-                      ...prev,
-                      [pipelineId]: {
-                        content: reviewPromptContent,
-                        title: selectedPrompt || "Custom Prompt",
-                        timestamp: new Date().toLocaleString(),
-                      }
-                    }));
-                    setTimeout(() => {
-                      setIsApplyingPrompt(false);
-                      setShowSuccessTransition(true);
-                      setTimeout(() => {
-                        setShowSuccessTransition(false);
-                        setShowPromptAppliedModal(true);
-                      }, 500); // short transition before showing success modal
-                    }, 3000); // 3 seconds
-                  }}
+                  onClick={handlePromptClick}
                 >
                   Apply Prompt
                 </Button>
