@@ -52,7 +52,12 @@ import { CSSTransition } from 'react-transition-group';
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
 import useFetchPipeline from "../hooks/useFetchPipeline";
+import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
+// Custom prompt fetch hook
+
+// Handler for Use Prompt button
 import { useSelector } from "react-redux";
+
 
 function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -107,7 +112,7 @@ function UserManagement() {
       setSelectedWorkspace(workspaces[0] || "");
     }
   }, [workspaces, selectedWorkspace]);
-  
+
   // Sample user data with medical context (fallback for demo)
   const [pipelines, setPipelines] = useState([]);
 
@@ -121,7 +126,7 @@ function UserManagement() {
 
   // Use pipelineSources if available, otherwise fallback to users
   const pipelineData = pipelineSources && pipelineSources.length > 0 ? pipelineSources : pipelines;
-  
+
   // Filter pipelines based on search term
   const filteredUsers = pipelineData.filter(
     (pipeline) =>
@@ -170,6 +175,28 @@ function UserManagement() {
       setSelectedUsers([]);
     }
   };
+
+  const fetchCustomPrompt = useFetchCustomPrompt();
+
+  function handleUsePromptClick() {
+    if (!promptPipeline || !promptPipeline.id) return;
+    fetchCustomPrompt.mutate(
+      { pipelineID: promptPipeline.id },
+      {
+        onSuccess: (data) => {
+          console.log(data);
+          
+          setReviewPromptContent(data?.new_feedback_prompt);
+          setReviewPromptPipeline(promptPipeline);
+          setShowPromptReviewModal(true);
+          setShowPromptListModal(false);
+        },
+        onError: (err) => {
+          toast({ title: 'Failed to fetch prompt', description: err?.message || 'Unknown error', variant: 'destructive' });
+        }
+      }
+    );
+  }
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -726,8 +753,8 @@ function UserManagement() {
                           key={technique.id}
                           variant="outline"
                           className={`h-16 flex flex-col items-center gap-2 border-2 transition-all rounded-lg ${selectedTechniques.includes(technique.id)
-                              ? "border-[#2196F3] bg-blue-50 text-[#2196F3] shadow-md"
-                              : "border-gray-300 hover:border-[#2196F3] hover:bg-blue-25 bg-white"
+                            ? "border-[#2196F3] bg-blue-50 text-[#2196F3] shadow-md"
+                            : "border-gray-300 hover:border-[#2196F3] hover:bg-blue-25 bg-white"
                             }`}
                           onClick={() => handleTechniqueToggle(technique.id)}
                         >
@@ -754,8 +781,8 @@ function UserManagement() {
                       <Button
                         variant="outline"
                         className={`flex items-center gap-2 px-4 py-2 ${destinationType === "connection"
-                            ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
-                            : "border-gray-300 text-gray-700"
+                          ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
+                          : "border-gray-300 text-gray-700"
                           }`}
                         onClick={() => setDestinationType("connection")}
                       >
@@ -764,8 +791,8 @@ function UserManagement() {
                       <Button
                         variant="outline"
                         className={`flex items-center gap-2 px-4 py-2 ${destinationType === "dataset"
-                            ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
-                            : "border-gray-300 text-gray-700"
+                          ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
+                          : "border-gray-300 text-gray-700"
                           }`}
                         onClick={() => setDestinationType("dataset")}
                       >
@@ -1018,12 +1045,6 @@ function UserManagement() {
                 <TableHead className="text-white font-medium">
                   Technique
                 </TableHead>
-                {/* <TableHead className="text-white font-medium">
-                  Agent
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Schedule
-                </TableHead> */}
                 <TableHead className="text-white font-medium">Status</TableHead>
                 <TableHead className="text-white font-medium">
                   Created
@@ -1065,12 +1086,6 @@ function UserManagement() {
                       {pipeline.destination}
                     </TableCell>
                     <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
-                    {/* <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                      {pipeline.processingAgent || "Not specified"}
-                    </TableCell> */}
-                    {/* <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                      {pipeline.schedule || "Not configured"}
-                    </TableCell> */}
                     <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
                     <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
                       {pipeline.created}
@@ -1241,14 +1256,10 @@ function UserManagement() {
                           <Button
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
-                            onClick={() => {
-                              setReviewPromptContent(suggestedPrompt.content);
-                              setReviewPromptPipeline(promptPipeline);
-                              setShowPromptReviewModal(true);
-                              setShowPromptListModal(false);
-                            }}
+                            disabled={fetchCustomPrompt.isLoading}
+                            onClick={handleUsePromptClick}
                           >
-                            Use Prompt
+                            {fetchCustomPrompt.isPending ? 'Loading...' : 'Use Prompt'}
                           </Button>
                         </span>
                       </div>
