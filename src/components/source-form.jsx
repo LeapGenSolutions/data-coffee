@@ -433,6 +433,7 @@ export function SourceForm({ mode = "add", initialSource,
         { email: user.email, newSource },
         {
           onSuccess: (data) => {
+            onSourceSaved?.(data); 
             navigate('/admin');
           },
           onError: (error) => {
