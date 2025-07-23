@@ -37,6 +37,7 @@ import {
   PaginationPrevious,
 } from "../components/ui/pagination";
 import { useToast } from "../hooks/use-toast";
+import { SourceDetailsModal } from "./source-details-modal";
 
 export default function SourceList({
   sources=[], onAddSource, onEditSource,
@@ -47,6 +48,8 @@ export default function SourceList({
   const [sortDirection, setSortDirection] = useState("asc");
   const [selectedSources, setSelectedSources] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedSourceForModal, setSelectedSourceForModal] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -89,6 +92,11 @@ export default function SourceList({
     }
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedSourceForModal(null);
+  };
+
   const handleSelectSource = (sourceId, checked) => {
     if (checked) {
       setSelectedSources([...selectedSources, sourceId]);
@@ -126,24 +134,8 @@ export default function SourceList({
 
   const handleView = (source) => {
     // Create a detailed view modal or navigate to details page
-    const details = `
-        Source Details:
-        - Name: ${source.name}
-        - Type: ${source.type}
-        - Location: ${source.location}
-        - Status: ${source.status}
-        - Created: ${new Date(source.createdAt).toLocaleDateString()}
-        - Last Sync: ${new Date(source.lastSync).toLocaleDateString()}
-        ${source.customPrompt ? `- Custom Prompt: ${source.customPrompt}` : ''}
-        ${source.dataSelectionMode ? `- Data Selection: ${source.dataSelectionMode}` : ''}
-    `.trim();
-
-    alert(details);
-
-    toast({
-      title: "Source Details",
-      description: `Viewing configuration for ${source.name}`,
-    });
+    setSelectedSourceForModal(source);
+    setIsModalOpen(true);
   };
 
   const getStatusBadge = (status) => {
@@ -362,6 +354,11 @@ export default function SourceList({
           </Button>
         </div>
       )}
+      <SourceDetailsModal
+        source={selectedSourceForModal}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }
