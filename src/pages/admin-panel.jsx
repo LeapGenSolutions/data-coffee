@@ -8,6 +8,7 @@ import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
 import { useLocation } from "wouter";
+import { BACKEND_URL } from "../constants";
 
 export default function AdminPanel() {
   const [location, setLocation] = useLocation();
@@ -48,9 +49,20 @@ export default function AdminPanel() {
     setLocation("/admin");
   };
 
-  const handleDeleteSource = () => {
-    console.log("Source deleted. Refetching...");
-    refetch();
+  const handleDeleteSource = async (id, userId) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/source/${encodeURIComponent(userId)}/${encodeURIComponent(id)}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!response.ok) throw new Error("Failed to delete source");
+      console.log("Source deleted. Refetching...");
+      refetch();
+    } catch (err) {
+      console.error("Error deleting source:", err);
+    }
   };
 
   return (
