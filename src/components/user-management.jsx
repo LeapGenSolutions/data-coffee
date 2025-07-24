@@ -111,12 +111,21 @@ function UserManagement() {
     error: pipelineError, 
     refetch: refetchPipelines } = useFetchPipeline(selectedWorkspace.id);
 
+  const savePipeline = useSavePipeline();
+  const patchPipeline = usePatchPipeline();
+
   // Set the first workspace when workspaces are loaded
   useEffect(() => {
     if (workspaces && workspaces.length > 0 && !selectedWorkspace) {
       setSelectedWorkspace(workspaces[0] || "");
     }
   }, [workspaces, selectedWorkspace]);
+
+  useEffect(() => {
+  if (savePipeline.isSuccess || patchPipeline.isSuccess) {
+    refetchPipelines();
+  }
+}, [savePipeline.isSuccess, patchPipeline.isSuccess]);
 
   // Sample user data with medical context (fallback for demo)
   const [pipelines, setPipelines] = useState([]);
@@ -185,7 +194,6 @@ function UserManagement() {
   };
 
   const fetchCustomPrompt = useFetchCustomPrompt();
-  const patchPipeline = usePatchPipeline();
 
   function handleUsePromptClick() {
     if (!promptPipeline || !promptPipeline.id) return;
@@ -272,134 +280,167 @@ function UserManagement() {
   };
 
   const getTechniqueBadge = (technique) => {
-    const techniqueConfig = {
-      anonymization: {
-        className: "bg-[#9C27B0] text-white",
-        label: "Anonymization",
-      },
-      tokenization: {
-        className: "bg-[#2196F3] text-white",
-        label: "Tokenization",
-      },
-      masking: { className: "bg-[#FF9800] text-white", label: "Masking" },
-      generate: { className: "bg-[#FF9800] text-white", label: "Masking" },
-    };
-
-    const config = technique ? techniqueConfig[technique.toLowerCase()] : {
-      className: "bg-[#4CAF50] text-white",
-      label: technique,
-    };
-
-    return (
-      <Badge className={`${config.className} text-xs px-2 py-1 rounded-md`}>
-        {config.label}
-      </Badge>
-    );
+  const techniqueConfig = {
+    anonymization: {
+      className: "bg-[#9C27B0] text-white",
+      label: "Anonymization",
+    },
+    tokenization: {
+      className: "bg-[#2196F3] text-white",
+      label: "Tokenization",
+    },
+    masking: { className: "bg-[#FF9800] text-white", label: "Masking" },
+    generate: { className: "bg-[#FF9800] text-white", label: "Masking" },
   };
 
-  const savePipeline = useSavePipeline();
+  let config;
+  if (technique && techniqueConfig[technique.toLowerCase()]) {
+    config = techniqueConfig[technique.toLowerCase()];
+  } else {
+    config = {
+      className: "bg-gray-300 text-gray-800",
+      label: technique || "Unknown",
+    };
+  }
+
+  return (
+    <Badge className={`${config.className} text-xs px-2 py-1 rounded-md`}>
+      {config.label}
+    </Badge>
+  );
+};
+
 
   const handleCreateUserPipeline = async () => {
-    if (currentStep === 1) {
-      if (!newUser.name) {
-        toast({
-          title: "Validation Error",
-          description: "Please enter a pipeline name",
-          variant: "destructive",
-        });
-        return;
-      }
-      setCurrentStep(2);
+  if (currentStep === 1) {
+    if (!newUser.name) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter a pipeline name",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCurrentStep(2);
+    return;
+  }
+
+  if (currentStep === 2) {
+    const destinationValid =
+      destinationType === "connection"
+        ? connectionString.trim() !== ""
+        : newUser.destinationDatabase !== "";
+
+    if (
+      !newUser.sourceDatabase ||
+      !destinationValid ||
+      selectedTechniques.length === 0
+    ) {
+      toast({
+        title: "Validation Error",
+        description:
+          "Please fill in all required fields and select at least one security technique",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCurrentStep(3);
+    return;
+  }
+
+  if (currentStep === 3) {
+    if (!selectedProcessingAgent && !isEditing) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a processing agent",
+        variant: "destructive",
+      });
+      return;
+    }
+    setCurrentStep(4);
+    return;
+  }
+
+  if (currentStep === 4) {
+    if (!runConfiguration.schedule) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a run schedule",
+        variant: "destructive",
+      });
       return;
     }
 
-    if (currentStep === 2) {
-      const destinationValid =
-        destinationType === "connection"
-          ? connectionString.trim() !== ""
-          : newUser.destinationDatabase !== "";
-
-      if (
-        !newUser.sourceDatabase ||
-        !destinationValid ||
-        selectedTechniques.length === 0
-      ) {
-        toast({
-          title: "Validation Error",
-          description:
-            "Please fill in all required fields and select at least one security technique",
-          variant: "destructive",
-        });
-        return;
-      }
-      setCurrentStep(3);
-      return;
+    // Find source and destination IDs from availableSources
+    let sourceId = "", destId = "";
+    if (Array.isArray(availableSources)) {
+      const srcObj = availableSources.find(src => src?.configuration?.sourceName === newUser.sourceDatabase);
+      sourceId = srcObj?.id;
+      const dstObj = availableSources.find(src => src?.configuration?.sourceName === newUser.destinationDatabase);
+      destId = dstObj?.id || "";
     }
 
-    if (currentStep === 3) {
-      if (!selectedProcessingAgent && !isEditing) {
-        toast({
-          title: "Validation Error",
-          description: "Please select a processing agent",
-          variant: "destructive",
-        });
-        return;
-      }
-      setCurrentStep(4);
-      return;
-    }
+    const pipeline = {
+      ...(isEditing && editPipeline ? { id: editPipeline.id } : {}),
+      name: newUser.name,
+      source: newUser.sourceDatabase,
+      sourceDatabaseId: sourceId,
+      destination: destinationType === "connection" ? connectionString : newUser.destinationDatabase,
+      destinationDatabaseId: destinationType === "connection" ? "" : destId,
+      technique: selectedTechniques.join(", "),
+      processingAgent: selectedProcessingAgent,
+      customPrompt: newUser.customPrompt,
+      schedule: runConfiguration.schedule,
+      notifications: runConfiguration.notifications,
+      auto_close: runConfiguration.autoClose,          
+      enable_surround_AI: enableSurroundAI,           
+      status: newUser.status || "Active",
+      workspaceID: selectedWorkspace.id,
+      workspaceName: selectedWorkspace.workspaceName,
+      created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
+      destinationType,
+      connectionString,
+    };
 
-    if (currentStep === 4) {
-      if (!runConfiguration.schedule) {
-        toast({
-          title: "Validation Error",
-          description: "Please select a run schedule",
-          variant: "destructive",
-        });
-        return;
-      }
+    if (isEditing && editPipeline) {
+      const userEmail = editPipeline.user_id || editPipeline.email || 'unknown@example.com';
 
-      // Find source and destination IDs from availableSources
-      let sourceId = "", destId = "";
-      if (Array.isArray(availableSources)) {
-        const srcObj = availableSources.find(src => src?.configuration?.sourceName === newUser.sourceDatabase);
-        sourceId = srcObj?.id;
-        const dstObj = availableSources.find(src => src?.configuration?.sourceName === newUser.destinationDatabase);
-        destId = dstObj?.id || "";
-      }
-      console.log("Source ID:", sourceId);
-      console.log("Destination ID:", destId);
-
-      const pipeline = {
-        id: isEditing && editPipeline ? editPipeline.id : Date.now(),
-        name: newUser.name,
-        source: newUser.sourceDatabase,
-        sourceDatabaseId: sourceId,
-        destination: destinationType === "connection" ? connectionString : newUser.destinationDatabase,
-        destinationDatabaseId: destinationType === "connection" ? "" : destId,
-        technique: selectedTechniques.join(", "),
-        processingAgent: selectedProcessingAgent,
-        customPrompt: newUser.customPrompt,
-        schedule: runConfiguration.schedule,
-        notifications: runConfiguration.notifications,
-        status: newUser.status || "Active",
-        workspaceID: selectedWorkspace.id,
-        workspaceName: selectedWorkspace.workspaceName,
-        created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
-        destinationType,
-        connectionString,
-        enableSurroundAI,
-      };
-      console.log(pipeline);
-
+      patchPipeline.mutate({
+        email: userEmail,
+        pipelineId: editPipeline.id,
+        pipeline,
+      }, {
+        onSuccess: (data) => {
+          toast({
+            title: "Pipeline Updated",
+            description: `${data.name} has been updated.`,
+            variant: "success",
+          });
+          setPipelines(users => users.map(u => u.id === data.id ? data : u));
+          resetForm();
+          setShowCreateUserDialog(false);
+          setIsEditing(false);
+          setEditPipeline(null);
+        },
+        onError: (error) => {
+          toast({
+            title: "API Error",
+            description: error?.message || "Failed to update pipeline on server.",
+            variant: "destructive",
+          });
+        }
+      });
+    } else {
       savePipeline.mutateAsync(pipeline, {
         onSuccess: (data) => {
           toast({
-            title: "Pipeline Saved",
-            description: `${data.name} has been saved successfully.`,
+            title: "Pipeline Created",
+            description: `${data.name} has been added successfully.`,
             variant: "success",
           });
-          refetchPipelines();
+          setPipelines([...pipelines, data]);
+          resetForm();
+          setShowCreateUserDialog(false);
         },
         onError: (error) => {
           toast({
@@ -409,12 +450,9 @@ function UserManagement() {
           });
         }
       });
-      resetForm();
-      setShowCreateUserDialog(false);
-      setIsEditing(false);
-      setEditPipeline(null);
     }
-  };
+  }
+};
 
   const resetForm = () => {
     setNewUser({
@@ -584,20 +622,21 @@ function UserManagement() {
       sourceDatabase: pipeline.source,
       sourceDatabaseId: pipeline.sourceDatabaseId || "",
       destinationDatabaseId: pipeline.destinationDatabaseId || "",
-      destinationDatabase: pipeline.destinationType === "dataset" ? pipeline.destination : "",
+      destinationDatabase: pipeline.destination || "",
       techniques: pipeline.technique ? pipeline.technique.split(", ") : [],
+      customPrompt: pipeline.customPrompt || "",
       status: pipeline.status,
     });
     setSelectedTechniques(pipeline.technique ? pipeline.technique.split(", ") : []);
     setDestinationType(pipeline.destinationType || "dataset");
     setConnectionString(pipeline.destinationType === "connection" ? pipeline.connectionString : "");
-    setSelectedProcessingAgent(pipeline.processingAgent || "");
+    setSelectedProcessingAgent(pipeline.processingAgent || pipeline.processing_agent || "");
     setRunConfiguration({
       schedule: pipeline.schedule || "",
       notifications: pipeline.notifications || false,
-      autoClose: pipeline.autoClose || false,
+      autoClose: pipeline.auto_close || pipeline.autoClose || false,
     });
-    setEnableSurroundAI(!!pipeline.enableSurroundAI);
+    setEnableSurroundAI(!!pipeline.enable_surround_AI);
   };
 
   return (
@@ -1119,7 +1158,9 @@ function UserManagement() {
                   className="bg-[#2196F3] hover:bg-[#1976D2] text-white px-8 py-2 font-medium"
                 >
                   {currentStep === 1
-                    ? "Create Pipeline"
+                    ? isEditing
+                      ? "Edit Pipeline"
+                      : "Create Pipeline"
                     : currentStep === 4
                       ? "Complete Pipeline"
                       : "Next →"}
