@@ -621,20 +621,20 @@ function UserManagement() {
       sourceDatabase: pipeline.source,
       sourceDatabaseId: pipeline.sourceDatabaseId || "",
       destinationDatabaseId: pipeline.destinationDatabaseId || "",
-      destinationDatabase: pipeline.destinationType === "dataset" ? pipeline.destination : "",
+      destinationDatabase: pipeline.destination || "",
       techniques: pipeline.technique ? pipeline.technique.split(", ") : [],
       status: pipeline.status,
     });
     setSelectedTechniques(pipeline.technique ? pipeline.technique.split(", ") : []);
     setDestinationType(pipeline.destinationType || "dataset");
     setConnectionString(pipeline.destinationType === "connection" ? pipeline.connectionString : "");
-    setSelectedProcessingAgent(pipeline.processingAgent || "");
+    setSelectedProcessingAgent(pipeline.processingAgent || pipeline.processing_agent || "");
     setRunConfiguration({
       schedule: pipeline.schedule || "",
       notifications: pipeline.notifications || false,
-      autoClose: pipeline.autoClose || false,
+      autoClose: pipeline.auto_close || pipeline.autoClose || false,
     });
-    setEnableSurroundAI(!!pipeline.enableSurroundAI);
+    setEnableSurroundAI(!!pipeline.enable_surround_AI);
   };
 
   return (
