@@ -8,6 +8,7 @@ import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
 import { useLocation } from "wouter";
+import useDeleteSource from '../hooks/useDeleteSource';
 
 export default function AdminPanel() {
   const [location, setLocation] = useLocation();
@@ -22,6 +23,8 @@ export default function AdminPanel() {
   const workspaces = useSelector((state) => state.workspaces.workspaces);
   const [selectedWorkspace, setSelectedWorkspace] = useState(() => workspaces[0] || []);
   const { sources: fetchedSources, isLoading, error, refetch } = useFetchSources(selectedWorkspace?.id);
+
+  const deleteSourceMutation = useDeleteSource();
   
   useEffect(() => {
     if (!isLoading) {
@@ -48,9 +51,14 @@ export default function AdminPanel() {
     setLocation("/admin");
   };
 
-  const handleDeleteSource = () => {
-    console.log("Source deleted. Refetching...");
-    refetch();
+  const handleDeleteSource = async (id, userId) => {
+    try {
+      await deleteSourceMutation.mutateAsync({ id, userId });
+      console.log("Source deleted. Refetching...");
+      refetch();
+    } catch (err) {
+      console.error("Error deleting source:", err);
+    }
   };
 
   return (

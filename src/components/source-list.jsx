@@ -37,7 +37,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "../components/ui/pagination";
-import { useToast } from "../hooks/use-toast";
 import { SourceDetailsModal } from "./source-details-modal";
 
 export default function SourceList({
@@ -52,7 +51,6 @@ export default function SourceList({
   const [selectedSourceForModal, setSelectedSourceForModal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const itemsPerPage = 10;
-  const { toast } = useToast();
 
   // Filter sources based on search term
   const filteredSources = useMemo(() => {
@@ -115,21 +113,10 @@ export default function SourceList({
   };
 
   const handleDelete = (source) => {
-    if (window.confirm(`Are you sure you want to delete "${source.name}"? This action cannot be undone.`)) {
-      if (onDeleteSource) {
-        onDeleteSource(source.id);
-        toast({
-          title: "Source Deleted",
-          description: `${source.name} has been removed from your data sources.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Delete Source",
-          description: `${source.name} would be deleted here`,
-          variant: "destructive",
-        });
-      }
+    const sourceName = source?.configuration?.sourceName || "Unnamed";
+
+    if (window.confirm(`Are you sure you want to delete "${sourceName}"? This action cannot be undone.`)) {
+      onDeleteSource(source.id, source.partitionIdentifier);
     }
   };
 
