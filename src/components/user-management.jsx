@@ -58,6 +58,7 @@ import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
 // Handler for Use Prompt button
 import { useSelector } from "react-redux";
 import usePatchPipeline from '../hooks/usePatchPipeline';
+import { format } from 'date-fns';
 
 
 function UserManagement() {
@@ -1230,7 +1231,7 @@ function UserManagement() {
                     <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
                     <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
                     <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                      {pipeline.created}
+                      {format(new Date(pipeline.created_at), 'MMMM dd, yyyy')}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
