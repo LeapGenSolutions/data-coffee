@@ -59,6 +59,8 @@ import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
 import { useSelector } from "react-redux";
 import usePatchPipeline from '../hooks/usePatchPipeline';
 
+import { BACKEND_URL } from '../constants';
+
 
 function UserManagement() {
 
@@ -535,36 +537,41 @@ function UserManagement() {
     );
   };
 
-  const handleClonePipeline = (pipeline) => {
-    // Find all pipelines with the same base name or base name with (n)
-    const baseName = pipeline.name.replace(/ \(\d+\)$/, "");
-    const regex = new RegExp(`^${baseName.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}(?: \\((\\d+)\\))?$`);
-    let maxClone = 0;
-    pipelineData.forEach((p) => {
-      const match = p.name.match(regex);
-      if (match && match[1]) {
-        maxClone = Math.max(maxClone, parseInt(match[1], 10));
-      } else if (match) {
-        maxClone = Math.max(maxClone, 0);
+  const handleClonePipeline = async (pipeline) => {
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/pipeline/${pipeline.user_id}/${pipeline.id}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Clone failed");
       }
-    });
-    const newName = `${baseName} (${maxClone + 1})`;
-    const newPipeline = {
-      ...pipeline,
-      id: Date.now(),
-      name: newName,
-      created: new Date().toLocaleDateString(),
-      status: "new",
-    };
-    setPipelines([...pipelines, newPipeline]);
-    toast({
-      title: "Pipeline Cloned",
-      description: (
-        <span>
-          <b>{newName}</b> was created. <Button variant="link" className="p-0 ml-2 text-blue-600" onClick={() => setEditPipeline(newPipeline)}>Edit now</Button>
-        </span>
-      ),
-    });
+
+      const clonedPipeline = await response.json();
+
+      // This updates the table
+      await refetchPipelines();
+
+      toast({
+        title: "Pipeline Cloned",
+        description: (
+          <span>
+            <b>{clonedPipeline.name}</b> was created successfully.
+          </span>
+        ),
+      });
+    } catch (err) {
+      console.error("Clone Error:", err);
+      toast({
+        title: "Clone Failed",
+        description: err.message || "Something went wrong while cloning.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Add mock prompt history and suggested prompt for demonstration
