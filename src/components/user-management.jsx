@@ -168,6 +168,21 @@ function UserManagement() {
     return 0;
   }) : [];
 
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return 'Invalid Date';
+    }
+  };
+
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -1098,6 +1113,7 @@ function UserManagement() {
                         id="enableSurroundAI"
                         checked={enableSurroundAI}
                         onCheckedChange={setEnableSurroundAI}
+                        className="border-gray-400"
                       />
                       <Label htmlFor="enableSurroundAI" className="ml-2">
                         Enable Surround AI
@@ -1202,13 +1218,13 @@ function UserManagement() {
             <TableBody>
               {pipelineLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
                     Loading pipelines...
                   </TableCell>
                 </TableRow>
               ) : pipelineError ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-red-500 py-8">
+                  <TableCell colSpan={8} className="text-center text-red-500 py-8">
                     Error loading pipelines: {pipelineError.message || 'Unknown error'}
                   </TableCell>
                 </TableRow>
@@ -1227,10 +1243,10 @@ function UserManagement() {
                     <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
                       {pipeline.destination}
                     </TableCell>
-                    <TableCell className="p-1 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
-                    <TableCell className="p-1 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
-                    <TableCell className="text-gray-600 p-1 text-sm whitespace-normal">
-                      {pipeline.created}
+                    <TableCell className="p-4 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                    <TableCell className="p-4 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
+                      {(pipeline.last_updated) ? formatDate(pipeline.last_updated) : formatDate(pipeline.created_at)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -1287,7 +1303,7 @@ function UserManagement() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-gray-500 py-8">
+                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
                     No pipelines found for the selected workspace.
                   </TableCell>
                 </TableRow>
