@@ -9,7 +9,8 @@ import {
   Edit,
   Trash2,
   Database,
-  RefreshCcw
+  RefreshCcw,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -51,6 +52,8 @@ export default function SourceList({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSourceForModal, setSelectedSourceForModal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [selectedSourceForDelete, setSelectedSourceForDelete] = useState(null);
   const itemsPerPage = 10;
   const { toast } = useToast();
 
@@ -115,8 +118,14 @@ export default function SourceList({
   };
 
   const handleDelete = (source) => {
-    if (window.confirm(`Are you sure you want to delete "${source.name}"? This action cannot be undone.`)) {
-      if (onDeleteSource) {
+    console.log("Deleting source:", source);
+    setShowAlertDialog(true);
+    setSelectedSourceForDelete(source);
+  }
+
+  const handleContinueDelete = (source) => {
+    setShowAlertDialog(false);
+    if (onDeleteSource) {
         onDeleteSource(source.id);
         toast({
           title: "Source Deleted",
@@ -130,8 +139,7 @@ export default function SourceList({
           variant: "destructive",
         });
       }
-    }
-  };
+  }
 
   const handleView = (source) => {
     // Create a detailed view modal or navigate to details page
@@ -186,7 +194,8 @@ export default function SourceList({
                 workspaces.map(ws => (
                   <option key={ws.id} value={ws.id}>{ws.workspaceName || ws.name || ws.id}</option>
                 ))
-              )}
+              )
+              }
             </select>
           </div>
         </div>
@@ -370,6 +379,48 @@ export default function SourceList({
         isOpen={isModalOpen}
         onClose={handleCloseModal}
       />
+      {showAlertDialog && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setShowAlertDialog(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <AlertTriangle className="h-10 w-10 text-red-600" aria-hidden="true" />
+            </div>
+            <div className="flex items-start">
+              <div className="ml-4 mt-0 text-left">
+                <h3 className="text-xl font-semibold text-gray-900 text-center">
+                  Are you absolutely sure?
+                </h3>
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600 text-center">
+                    This action cannot be undone. This will permanently delete the source <span className="font-semibold">"{selectedSourceForDelete?.configuration?.sourceName || "Unnamed"}"</span>.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:mt-4 sm:flex-row sm:justify-center">
+              <Button
+                variant="outline"
+                onClick={() => setShowAlertDialog(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={() => handleContinueDelete(selectedSourceForDelete)}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
