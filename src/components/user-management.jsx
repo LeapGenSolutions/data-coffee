@@ -63,7 +63,12 @@ import { BACKEND_URL } from '../constants';
 
 
 function UserManagement() {
-
+  const [sourceError, setSourceError] = useState(false);
+  const [techniquesError, setTechniquesError] = useState(false);
+  const [destinationError, setDestinationError] = useState(false);
+  const [nameError, setNameError] = useState(false);
+  const [agentError, setAgentError] = useState(false);
+  const [scheduleError, setScheduleError] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
@@ -210,8 +215,6 @@ function UserManagement() {
     }
   };
 
-  const fetchCustomPrompt = useFetchCustomPrompt();
-
   function handleUsePromptClick() {
     if (!promptPipeline || !promptPipeline.id) return;
     fetchCustomPrompt.mutate(
@@ -329,64 +332,89 @@ function UserManagement() {
 
 
   const handleCreateUserPipeline = async () => {
-  if (currentStep === 1) {
-    if (!newUser.name) {
-      toast({
-        title: "Validation Error",
-        description: "Please enter a pipeline name",
-        variant: "destructive",
-      });
+    if (currentStep === 1) {
+      if (!newUser.name) {
+        setNameError(true);
+        toast({
+          title: "Validation Error",
+          description: "Please enter a pipeline name",
+          variant: "destructive",
+        });
+        return;
+      }
+      setNameError(false);
+      setCurrentStep(2);
       return;
     }
-    setCurrentStep(2);
+
+    if (currentStep === 2) {
+  let hasError = false;
+
+  if (!newUser.sourceDatabase) {
+    setSourceError(true);
+    hasError = true;
+  } else {
+    setSourceError(false);
+  }
+
+  const destinationValid =
+    destinationType === "connection"
+      ? connectionString.trim() !== ""
+      : newUser.destinationDatabase !== "";
+
+  if (!destinationValid) {
+    setDestinationError(true);
+    hasError = true;
+  } else {
+    setDestinationError(false);
+  }
+
+  if (selectedTechniques.length === 0) {
+    setTechniquesError(true);
+    hasError = true;
+  } else {
+    setTechniquesError(false);
+  }
+
+  if (hasError) {
+    toast({
+      title: "Validation Error",
+      description: "Please fill in all required fields and select at least one security technique",
+      variant: "destructive",
+    });
     return;
   }
 
-  if (currentStep === 2) {
-    const destinationValid =
-      destinationType === "connection"
-        ? connectionString.trim() !== ""
-        : newUser.destinationDatabase !== "";
+  setCurrentStep(3);
+  return;
+}
 
-    if (
-      !newUser.sourceDatabase ||
-      !destinationValid ||
-      selectedTechniques.length === 0
-    ) {
-      toast({
-        title: "Validation Error",
-        description:
-          "Please fill in all required fields and select at least one security technique",
-        variant: "destructive",
-      });
-      return;
-    }
-    setCurrentStep(3);
+    if (currentStep === 3) {
+  if (!selectedProcessingAgent && !isEditing) {
+    setAgentError(true);
+    toast({
+      title: "Validation Error",
+      description: "Please select a processing agent",
+      variant: "destructive",
+    });
     return;
   }
+  setAgentError(false);
+  setCurrentStep(4);
+  return;
+}
 
-  if (currentStep === 3) {
-    if (!selectedProcessingAgent && !isEditing) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a processing agent",
-        variant: "destructive",
-      });
-      return;
-    }
-    setCurrentStep(4);
+    if (currentStep === 4) {
+  if (!runConfiguration.schedule) {
+    setScheduleError(true);
+    toast({
+      title: "Validation Error",
+      description: "Please select a run schedule",
+      variant: "destructive",
+    });
     return;
   }
-
-  if (currentStep === 4) {
-    if (!runConfiguration.schedule) {
-      toast({
-        title: "Validation Error",
-        description: "Please select a run schedule",
-        variant: "destructive",
-      });
-      return;
-    }
+  setScheduleError(false);
 
     // Find source and destination IDs from availableSources
     let sourceId = "", destId = "";
@@ -492,21 +520,46 @@ function UserManagement() {
       autoClose: false
     });
     setEnableSurroundAI(false);
+    setNameError(false);
+    setSourceError(false);
+    setTechniquesError(false);
+    setDestinationError(false);
+    setAgentError(false);
+    setScheduleError(false);
   };
 
   const handleBack = () => {
+    if (currentStep === 2) {
+    setSourceError(false);
+    setDestinationError(false);
+    setTechniquesError(false);
+  }
+  if (currentStep === 3) {
+  setAgentError(false);
+}
+if (currentStep === 4) {
+  setScheduleError(false);
+}
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  const handleTechniqueToggle = (technique) => {
-    setSelectedTechniques((prev) =>
-      prev.includes(technique)
-        ? prev.filter((t) => t !== technique)
-        : [...prev, technique],
-    );
-  };
+ const handleTechniqueToggle = (technique) => {
+  setSelectedTechniques((prev) => {
+    const updated = prev.includes(technique)
+      ? prev.filter((t) => t !== technique)
+      : [...prev, technique];
+
+    //  Clear error when at least one technique is selected
+    if (updated.length > 0) {
+      setTechniquesError(false);
+    }
+
+    return updated;
+  });
+};
+
 
   const handleDeleteUser = (userId) => {
     const user = pipelines.find((u) => u.id === userId);
@@ -794,74 +847,83 @@ function UserManagement() {
                     <Label htmlFor="name" className="text-gray-700">
                       Enter Pipeline Name:
                     </Label>
-                    <Input
+                      <Input
                       id="name"
                       value={newUser.name}
-                      onChange={(e) =>
-                        setNewUser({ ...newUser, name: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setNewUser({ ...newUser, name: value });
+
+                        if (value.trim()) {
+                          setNameError(false);
+                        }
+                      }}
                       placeholder="e.g. Customer Data Anonymization"
-                      className="input-override !bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900"
+                      className={`input-override !bg-white !focus:border-[#2196F3] !text-gray-900 h-12 ${
+                        nameError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                      }`}
                       style={{
                         backgroundColor: "white !important",
                         color: "#111827 !important",
                         border: "1px solid #d1d5db !important",
                       }}
                     />
+                    {nameError && (
+                      <p className="text-sm text-red-600 mt-1">Pipeline name is required.</p>
+                    )}
+
                   </div>
                 </div>
               )}
 
               {currentStep === 2 && (
-                <div className="space-y-8 py-6">
-                  {/* Select Data Source Section */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="border-b border-gray-300 pb-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        Select Data Source
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-6">
-                      Select the data source or enter a connection string to
-                      identify where data will be pulled from. Then choose one
-                      or more data security techniques to apply during
-                      processing.
-                    </p>
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4 mb-4">
-                      <p className="text-sm text-blue-700"></p>
-                    </div>
-                    <Select
-                      value={newUser.sourceDatabase}
-                      onValueChange={(value) =>
-                        setNewUser({ ...newUser, sourceDatabase: value })
-                      }
-                      disabled={sourcesLoading}
-                    >
-                      <SelectTrigger
-                        className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12"
-                        style={{ backgroundColor: "white", color: "#111827" }}
-                      >
-                        <SelectValue placeholder={sourcesLoading ? "Loading sources..." : "Select a data source or connection string"} />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        {sourcesLoading && (
-                          <div className="px-4 py-2 text-gray-500">Loading...</div>
-                        )}
-                        {sourcesError && (
-                          <div className="px-4 py-2 text-red-500">Error loading sources</div>
-                        )}
-                        {Array.isArray(availableSources) && availableSources.length > 0 ? (
-                          availableSources.map((src) => (
-                            <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
-                              {src?.configuration?.sourceName}
-                            </SelectItem>
-                          ))
-                        ) : !sourcesLoading && !sourcesError ? (
-                          <div className="px-4 py-2 text-gray-500">No sources found</div>
-                        ) : null}
-                      </SelectContent>
-                    </Select>
-                  </div>
+  <div className="space-y-8 py-6">
+    {/* Select Data Source Section */}
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+      <div className="border-b border-gray-300 pb-3 mb-4">
+        <h3 className="text-lg font-semibold text-gray-800">Select Data Source</h3>
+      </div>
+      <p className="text-sm text-gray-600 mb-6">
+        Select the data source or enter a connection string to identify where data will be pulled from. Then choose one or more data security techniques to apply during processing.
+      </p>
+      <Select
+      value={newUser.sourceDatabase}
+      onValueChange={(value) => {
+        setNewUser({ ...newUser, sourceDatabase: value });
+
+        if (value.trim()) {
+          setSourceError(false); // Clear error as soon as a valid value is selected
+        }
+      }}
+      disabled={sourcesLoading}
+    >
+
+        <SelectTrigger
+          className={`!bg-white !text-gray-900 h-12 ${
+            sourceError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+          }`}
+          style={{ backgroundColor: "white", color: "#111827" }}
+        >
+          <SelectValue placeholder={sourcesLoading ? "Loading sources..." : "Select a data source"} />
+        </SelectTrigger>
+        <SelectContent className="bg-white">
+          {sourcesLoading && <div className="px-4 py-2 text-gray-500">Loading...</div>}
+          {sourcesError && <div className="px-4 py-2 text-red-500">Error loading sources</div>}
+          {Array.isArray(availableSources) && availableSources.length > 0 ? (
+            availableSources.map((src) => (
+              <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
+                {src?.configuration?.sourceName}
+              </SelectItem>
+            ))
+          ) : (
+            !sourcesLoading && !sourcesError && (
+              <div className="px-4 py-2 text-gray-500">No sources found</div>
+            )
+          )}
+        </SelectContent>
+      </Select>
+      {sourceError && <p className="text-sm text-red-600 mt-1">Data source is required.</p>}
+    </div>
 
                   {/* Select Security Techniques Section */}
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
@@ -899,7 +961,7 @@ function UserManagement() {
                         </Button>
                       ))}
                     </div>
-                    <div className="bg-blue-50 border border-blue-200 rounded-md p-4"></div>
+                    {techniquesError && <p className="text-sm text-red-600 mt-1">Select at least one technique.</p>}
                   </div>
 
                   {/* Destination Configuration Section */}
@@ -934,72 +996,69 @@ function UserManagement() {
                       </Button>
                     </div>
 
-                    {destinationType === "connection" ? (
-                      <div className="space-y-3">
-                        <Input
-                          value={connectionString}
-                          onChange={(e) => setConnectionString(e.target.value)}
-                          placeholder="Enter full connection string (e.g., postgresql://user:pass@host:5432/dbname)"
-                          className="input-override !bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12"
-                          style={{
-                            backgroundColor: "white !important",
-                            color: "#111827 !important",
-                            border: "1px solid #d1d5db !important",
-                          }}
-                        />
-                        <p className="text-sm text-gray-600">
-                          Specify a full connection string for the destination
-                          source, or select a predefined dataset from your
-                          organization.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <Select
-                          value={newUser.destinationDatabase}
-                          onValueChange={(value) =>
-                            setNewUser({
-                              ...newUser,
-                              destinationDatabase: value,
-                            })
-                          }
-                        >
-                          <SelectTrigger
-                            className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12"
-                            style={{
-                              backgroundColor: "white",
-                              color: "#111827",
-                            }}
-                          >
-                            <SelectValue placeholder="Select from saved datasets" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {sourcesLoading && (
-                              <div className="px-4 py-2 text-gray-500">Loading...</div>
-                            )}
-                            {sourcesError && (
-                              <div className="px-4 py-2 text-red-500">Error loading sources</div>
-                            )}
-                            {Array.isArray(availableSources) && availableSources.length > 0 ? (
-                              availableSources.map((src) => (
-                                <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
-                                  {src?.configuration?.sourceName}
-                                </SelectItem>
-                              ))
-                            ) : !sourcesLoading && !sourcesError ? (
-                              <div className="px-4 py-2 text-gray-500">No sources found</div>
-                            ) : null}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-sm text-gray-600">
-                          Choose a predefined dataset from your organization's
-                          saved configurations.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+      {destinationType === "connection" ? (
+        <>
+          <Input
+          value={connectionString}
+          onChange={(e) => {
+            const value = e.target.value;
+            setConnectionString(value);
+
+            //  Clear destination error when user types something valid
+            if (value.trim()) {
+              setDestinationError(false);
+            }
+          }}
+          placeholder="Enter full connection string (e.g., postgresql://user:pass@host:5432/dbname)"
+          className={`input-override !bg-white !text-gray-900 h-12 ${
+            destinationError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+          }`}
+          style={{
+            backgroundColor: "white",
+            color: "#111827",
+            border: "1px solid #d1d5db",
+          }}
+        />
+        {destinationError && (
+          <p className="text-sm text-red-600 mt-1">Connection string is required.</p>
+        )}
+        </>
+      ) : (
+        <>
+         <Select
+          value={newUser.destinationDatabase}
+          onValueChange={(value) => {
+            setNewUser({ ...newUser, destinationDatabase: value });
+
+            //  Clear error immediately when a dataset is selected
+            if (value.trim()) {
+              setDestinationError(false);
+            }
+          }}
+        >
+            <SelectTrigger
+              className={`!bg-white !text-gray-900 h-12 ${
+                destinationError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+              }`}
+              style={{ backgroundColor: "white", color: "#111827" }}
+            >
+              <SelectValue placeholder="Select from saved datasets" />
+            </SelectTrigger>
+            <SelectContent className="bg-white">
+              {Array.isArray(availableSources) &&
+                availableSources.map((src) => (
+                  <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
+                    {src?.configuration?.sourceName}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          {destinationError && <p className="text-sm text-red-600 mt-1">Dataset is required.</p>}
+        </>
+      )}
+    </div>
+  </div>
+)}
 
               {currentStep === 3 && (
                 <div className="space-y-6 py-6">
@@ -1030,8 +1089,22 @@ function UserManagement() {
                         // Remove duplicates
                         allowedAgents = Array.from(new Set(allowedAgents));
                         return (
-                          <Select value={selectedProcessingAgent} onValueChange={setSelectedProcessingAgent}>
-                            <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
+                      <Select
+                      value={selectedProcessingAgent}
+                      onValueChange={(value) => {
+                        setSelectedProcessingAgent(value);
+
+                        if (value.trim()) {
+                          setAgentError(false);
+                        }
+                        }}
+                           >
+                            <SelectTrigger
+                              className={`!bg-white !text-gray-900 h-12 ${
+                                agentError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                              }`}
+                              style={{ backgroundColor: 'white', color: '#111827' }}
+                            >
                               <SelectValue placeholder="Select a processing agent" />
                             </SelectTrigger>
                             <SelectContent className="bg-white">
@@ -1039,6 +1112,9 @@ function UserManagement() {
                                 <SelectItem key={agent} value={agent}>{agent}</SelectItem>
                               ))}
                             </SelectContent>
+                            {agentError && (
+                              <p className="text-sm text-red-600 mt-1">Processing agent is required.</p>
+                            )}
                           </Select>
                         );
                       })()
@@ -1076,8 +1152,22 @@ function UserManagement() {
                         <Label className="text-sm font-medium text-gray-700 mb-2 block">
                           Run Schedule
                         </Label>
-                        <Select value={runConfiguration.schedule} onValueChange={(value) => setRunConfiguration({ ...runConfiguration, schedule: value })}>
-                          <SelectTrigger className="!bg-white !border-gray-300 !focus:border-[#2196F3] !text-gray-900 h-12" style={{ backgroundColor: 'white', color: '#111827' }}>
+                        <Select
+                        value={runConfiguration.schedule}
+                        onValueChange={(value) => {
+                          setRunConfiguration({ ...runConfiguration, schedule: value });
+
+                          if (value.trim()) {
+                            setScheduleError(false);
+                          }
+                        }}
+                         >
+                          <SelectTrigger
+                            className={`!bg-white !text-gray-900 h-12 ${
+                              scheduleError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                            }`}
+                            style={{ backgroundColor: 'white', color: '#111827' }}
+                          >
                             <SelectValue placeholder="Select run schedule" />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
@@ -1087,6 +1177,9 @@ function UserManagement() {
                             <SelectItem value="monthly">Monthly</SelectItem>
                             <SelectItem value="manual">Manual Trigger Only</SelectItem>
                           </SelectContent>
+                          {scheduleError && (
+                            <p className="text-sm text-red-600 mt-1">Run schedule is required.</p>
+                          )}
                         </Select>
                       </div>
 
@@ -1170,12 +1263,15 @@ function UserManagement() {
                 {currentStep === 1 && (
                   <Button
                     variant="outline"
-                    onClick={() => setShowCreateUserDialog(false)}
-                    className="border-gray-300 text-gray-700 px-6 py-2"
-                  >
-                    Cancel
-                  </Button>
-                )}
+                    onClick={() => {
+                        resetForm(); // ← resets nameError and form state
+                        setShowCreateUserDialog(false);
+                      }}
+                      className="border-gray-300 text-gray-700 px-6 py-2"
+                    >
+                      Cancel
+                    </Button>
+                  )}
                 <Button
                   onClick={handleCreateUserPipeline}
                   className="bg-[#2196F3] hover:bg-[#1976D2] text-white px-8 py-2 font-medium"
