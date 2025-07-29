@@ -98,8 +98,8 @@ export function SourceDetailsModal({ source, isOpen, onClose }) {
       <DialogContent className="max-w-2xl bg-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl text-gray-900">
-            {getSourceTypeIcon(source.type)}
-            {source.name}
+            {getSourceTypeIcon(source.configuration?.sourceType)}
+            {source.configuration?.sourceName || "Unnamed"}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
             Detailed configuration and status information for this data source
@@ -115,15 +115,19 @@ export function SourceDetailsModal({ source, isOpen, onClose }) {
                   <Database className="h-4 w-4 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Type</span>
                 </div>
-                <span className="text-sm text-gray-900">{getSourceTypeDisplayName(source.type)}</span>
+                <span className="text-sm text-gray-900">
+                  {getSourceTypeDisplayName(source.configuration?.sourceType)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  {getLocationIcon(source.location)}
+                  {getLocationIcon(source.configuration?.location)}
                   <span className="text-sm font-medium text-gray-700">Location</span>
                 </div>
-                <span className="text-sm text-gray-900">{getLocationDisplayName(source.location)}</span>
+                <span className="text-sm text-gray-900">
+                  {getLocationDisplayName(source.configuration?.location)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -151,7 +155,9 @@ export function SourceDetailsModal({ source, isOpen, onClose }) {
                   <Calendar className="h-4 w-4 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Created</span>
                 </div>
-                <span className="text-sm text-gray-900">{formatDate(source.createdAt)}</span>
+                <span className="text-sm text-gray-900">
+                  {formatDate(source.created_at)}
+                </span>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -159,51 +165,88 @@ export function SourceDetailsModal({ source, isOpen, onClose }) {
                   <Clock className="h-4 w-4 text-gray-500" />
                   <span className="text-sm font-medium text-gray-700">Last Sync</span>
                 </div>
-                <span className="text-sm text-gray-900">{formatDate(source.lastSync)}</span>
+                <span className="text-sm text-gray-900">
+                  {formatDate(source.last_sync)}
+                </span>
               </div>
             </div>
           </div>
 
           {/* Additional Configuration */}
-          {(source.customPrompt || source.dataSelectionMode || source.selectedTables) && (
+          {(source.custom_query || source.data_selection_mode || source.selected_tables?.length > 0) && (
             <div className="space-y-4">
               <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
                 Additional Configuration
               </h4>
 
-              {source.customPrompt && (
+              {source.custom_query && (
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">Custom Prompt</label>
+                  <label className="text-sm font-medium text-gray-700">Custom Query</label>
                   <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <p className="text-sm text-gray-700">{source.customPrompt}</p>
+                    <p className="text-sm text-gray-700">{source.custom_query}</p>
                   </div>
                 </div>
               )}
 
-              {source.dataSelectionMode && (
+              {source.configuration?.location === "cloud" && (
+                <div className="space-y-4">
+                  <label className="text-sm font-medium text-gray-700">Cloud Configuration</label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-1">Cloud Provider</p>
+                      <p className="text-sm text-gray-700">
+                        {source.configuration?.cloudProvider || "N/A"}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-1">File Format</p>
+                      <p className="text-sm text-gray-700">
+                        {source.configuration?.fileFormat || "N/A"}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-1">Path Prefix</p>
+                      <p className="text-sm text-gray-700">
+                        {source.configuration?.pathPrefix || "N/A"}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-1">Storage Account</p>
+                      <p className="text-sm text-gray-700">
+                        {source.configuration?.storageAccountName || "N/A"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {source.data_selection_mode && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Data Selection Mode</label>
                   <div className="p-3 bg-green-50 rounded-lg border border-green-200">
                     <p className="text-sm text-gray-700 capitalize">
-                      {source.dataSelectionMode.replace(/([A-Z])/g, ' $1').trim()}
+                      {source.data_selection_mode.replace(/_/g, ' ')}
                     </p>
                   </div>
                 </div>
               )}
 
-              {source.selectedTables && source.selectedTables.length > 0 && (
+              {source.selected_tables && source.selected_tables.length > 0 && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Selected Tables/Collections</label>
                   <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
                     <div className="flex flex-wrap gap-1">
-                      {source.selectedTables.slice(0, 5).map((table, index) => (
+                      {source.selected_tables.slice(0, 5).map((table, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {table}
                         </Badge>
                       ))}
-                      {source.selectedTables.length > 5 && (
+                      {source.selected_tables.length > 5 && (
                         <Badge variant="secondary" className="text-xs">
-                          +{source.selectedTables.length - 5} more
+                          +{source.selected_tables.length - 5} more
                         </Badge>
                       )}
                     </div>
@@ -232,4 +275,4 @@ export function SourceDetailsModal({ source, isOpen, onClose }) {
       </DialogContent>
     </Dialog>
   );
-} 
+}
