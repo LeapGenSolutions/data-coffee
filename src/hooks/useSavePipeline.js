@@ -20,3 +20,16 @@ export default function useSavePipeline() {
     }
   });
 }
+
+export const useClonePipeline = () => {
+  return useMutation({
+    mutationFn: async ({ user_id, pipeline_id }) => {
+      const response = await fetch(`${BACKEND_URL}/api/pipeline/${user_id}/${pipeline_id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!response.ok) throw new Error("Failed to clone pipeline");
+      return await response.json();
+    },
+  });
+};
