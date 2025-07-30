@@ -116,9 +116,9 @@ function UserManagement() {
 
   // Fetch available sources for the selected workspace
   const { sources: availableSources, isLoading: sourcesLoading, error: sourcesError } = useFetchSources(selectedWorkspace.id);
-  const { sources: pipelineSources, 
-    isLoading: pipelineLoading, 
-    error: pipelineError, 
+  const { sources: pipelineSources,
+    isLoading: pipelineLoading,
+    error: pipelineError,
     refetch: refetchPipelines } = useFetchPipeline(selectedWorkspace.id);
 
   const savePipeline = useSavePipeline();
@@ -132,10 +132,10 @@ function UserManagement() {
   }, [workspaces, selectedWorkspace]);
 
   useEffect(() => {
-  if (savePipeline.isSuccess || patchPipeline.isSuccess) {
-    refetchPipelines();
-  }
-}, [savePipeline.isSuccess, patchPipeline.isSuccess]);
+    if (savePipeline.isSuccess || patchPipeline.isSuccess) {
+      refetchPipelines();
+    }
+  }, [savePipeline.isSuccess, patchPipeline.isSuccess]);
 
   // Sample user data with medical context (fallback for demo)
   const [pipelines, setPipelines] = useState([]);
@@ -305,35 +305,35 @@ function UserManagement() {
   };
 
   const getTechniqueBadge = (technique) => {
-  const techniqueConfig = {
-    anonymization: {
-      className: "bg-[#9C27B0] text-white",
-      label: "Anonymization",
-    },
-    tokenization: {
-      className: "bg-[#2196F3] text-white",
-      label: "Tokenization",
-    },
-    masking: { className: "bg-[#FF9800] text-white", label: "Masking" },
-    generate: { className: "bg-[#FF9800] text-white", label: "Masking" },
-  };
-
-  let config;
-  if (technique && techniqueConfig[technique.toLowerCase()]) {
-    config = techniqueConfig[technique.toLowerCase()];
-  } else {
-    config = {
-      className: "bg-gray-300 text-gray-800",
-      label: technique || "Unknown",
+    const techniqueConfig = {
+      anonymization: {
+        className: "bg-[#9C27B0] text-white",
+        label: "Anonymization",
+      },
+      tokenization: {
+        className: "bg-[#2196F3] text-white",
+        label: "Tokenization",
+      },
+      masking: { className: "bg-[#FF9800] text-white", label: "Masking" },
+      generate: { className: "bg-[#FF9800] text-white", label: "Masking" },
     };
-  }
 
-  return (
-    <Badge className={`${config.className} text-xs px-2 py-1 rounded-md`}>
-      {config.label}
-    </Badge>
-  );
-};
+    let config;
+    if (technique && techniqueConfig[technique.toLowerCase()]) {
+      config = techniqueConfig[technique.toLowerCase()];
+    } else {
+      config = {
+        className: "bg-gray-300 text-gray-800",
+        label: technique || "Unknown",
+      };
+    }
+
+    return (
+      <Badge className={`${config.className} text-xs px-2 py-1 rounded-md`}>
+        {config.label}
+      </Badge>
+    );
+  };
 
 
   const handleCreateUserPipeline = async () => {
@@ -353,156 +353,156 @@ function UserManagement() {
     }
 
     if (currentStep === 2) {
-  let hasError = false;
+      let hasError = false;
 
-  if (!newUser.sourceDatabase) {
-    setSourceError(true);
-    hasError = true;
-  } else {
-    setSourceError(false);
-  }
+      if (!newUser.sourceDatabase) {
+        setSourceError(true);
+        hasError = true;
+      } else {
+        setSourceError(false);
+      }
 
-  const destinationValid =
-    destinationType === "connection"
-      ? connectionString.trim() !== ""
-      : newUser.destinationDatabase !== "";
+      const destinationValid =
+        destinationType === "connection"
+          ? connectionString.trim() !== ""
+          : newUser.destinationDatabase !== "";
 
-  if (!destinationValid) {
-    setDestinationError(true);
-    hasError = true;
-  } else {
-    setDestinationError(false);
-  }
+      if (!destinationValid) {
+        setDestinationError(true);
+        hasError = true;
+      } else {
+        setDestinationError(false);
+      }
 
-  if (selectedTechniques.length === 0) {
-    setTechniquesError(true);
-    hasError = true;
-  } else {
-    setTechniquesError(false);
-  }
+      if (selectedTechniques.length === 0) {
+        setTechniquesError(true);
+        hasError = true;
+      } else {
+        setTechniquesError(false);
+      }
 
-  if (hasError) {
-    toast({
-      title: "Validation Error",
-      description: "Please fill in all required fields and select at least one security technique",
-      variant: "destructive",
-    });
-    return;
-  }
+      if (hasError) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields and select at least one security technique",
+          variant: "destructive",
+        });
+        return;
+      }
 
-  setCurrentStep(3);
-  return;
-}
+      setCurrentStep(3);
+      return;
+    }
 
     if (currentStep === 3) {
-  if (!selectedProcessingAgent && !isEditing) {
-    setAgentError(true);
-    toast({
-      title: "Validation Error",
-      description: "Please select a processing agent",
-      variant: "destructive",
-    });
-    return;
-  }
-  setAgentError(false);
-  setCurrentStep(4);
-  return;
-}
+      if (!selectedProcessingAgent && !isEditing) {
+        setAgentError(true);
+        toast({
+          title: "Validation Error",
+          description: "Please select a processing agent",
+          variant: "destructive",
+        });
+        return;
+      }
+      setAgentError(false);
+      setCurrentStep(4);
+      return;
+    }
 
     if (currentStep === 4) {
-  if (!runConfiguration.schedule) {
-    setScheduleError(true);
-    toast({
-      title: "Validation Error",
-      description: "Please select a run schedule",
-      variant: "destructive",
-    });
-    return;
-  }
-  setScheduleError(false);
+      if (!runConfiguration.schedule) {
+        setScheduleError(true);
+        toast({
+          title: "Validation Error",
+          description: "Please select a run schedule",
+          variant: "destructive",
+        });
+        return;
+      }
+      setScheduleError(false);
 
-    // Find source and destination IDs from availableSources
-    let sourceId = "", destId = "";
-    if (Array.isArray(availableSources)) {
-      const srcObj = availableSources.find(src => src?.configuration?.sourceName === newUser.sourceDatabase);
-      sourceId = srcObj?.id;
-      const dstObj = availableSources.find(src => src?.configuration?.sourceName === newUser.destinationDatabase);
-      destId = dstObj?.id || "";
+      // Find source and destination IDs from availableSources
+      let sourceId = "", destId = "";
+      if (Array.isArray(availableSources)) {
+        const srcObj = availableSources.find(src => src?.configuration?.sourceName === newUser.sourceDatabase);
+        sourceId = srcObj?.id;
+        const dstObj = availableSources.find(src => src?.configuration?.sourceName === newUser.destinationDatabase);
+        destId = dstObj?.id || "";
+      }
+
+      const pipeline = {
+        ...(isEditing && editPipeline ? { id: editPipeline.id } : {}),
+        name: newUser.name,
+        source: newUser.sourceDatabase,
+        sourceDatabaseId: sourceId,
+        destination: destinationType === "connection" ? connectionString : newUser.destinationDatabase,
+        destinationDatabaseId: destinationType === "connection" ? "" : destId,
+        technique: selectedTechniques.join(", "),
+        processingAgent: selectedProcessingAgent,
+        customPrompt: newUser.customPrompt,
+        schedule: runConfiguration.schedule,
+        notifications: runConfiguration.notifications,
+        auto_close: runConfiguration.autoClose,
+        enable_surround_AI: enableSurroundAI,
+        status: newUser.status || "Active",
+        workspaceID: selectedWorkspace.id,
+        workspaceName: selectedWorkspace.workspaceName,
+        created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
+        destinationType,
+        connectionString,
+      };
+
+      if (isEditing && editPipeline) {
+        const userEmail = editPipeline.user_id || editPipeline.email || 'unknown@example.com';
+
+        patchPipeline.mutate({
+          email: userEmail,
+          pipelineId: editPipeline.id,
+          pipeline,
+        }, {
+          onSuccess: (data) => {
+            toast({
+              title: "Pipeline Updated",
+              description: `${data.name} has been updated.`,
+              variant: "success",
+            });
+            setPipelines(users => users.map(u => u.id === data.id ? data : u));
+            resetForm();
+            setShowCreateUserDialog(false);
+            setIsEditing(false);
+            setEditPipeline(null);
+          },
+          onError: (error) => {
+            toast({
+              title: "API Error",
+              description: error?.message || "Failed to update pipeline on server.",
+              variant: "destructive",
+            });
+          }
+        });
+      } else {
+        savePipeline.mutateAsync(pipeline, {
+          onSuccess: (data) => {
+            toast({
+              title: "Pipeline Created",
+              description: `${data.name} has been added successfully.`,
+              variant: "success",
+            });
+            setPipelines([...pipelines, data]);
+            resetForm();
+            setShowCreateUserDialog(false);
+          },
+          onError: (error) => {
+            toast({
+              title: "API Error",
+              description: error?.message || "Failed to save pipeline to server.",
+              variant: "destructive",
+            });
+          }
+        });
+      }
     }
-
-    const pipeline = {
-      ...(isEditing && editPipeline ? { id: editPipeline.id } : {}),
-      name: newUser.name,
-      source: newUser.sourceDatabase,
-      sourceDatabaseId: sourceId,
-      destination: destinationType === "connection" ? connectionString : newUser.destinationDatabase,
-      destinationDatabaseId: destinationType === "connection" ? "" : destId,
-      technique: selectedTechniques.join(", "),
-      processingAgent: selectedProcessingAgent,
-      customPrompt: newUser.customPrompt,
-      schedule: runConfiguration.schedule,
-      notifications: runConfiguration.notifications,
-      auto_close: runConfiguration.autoClose,          
-      enable_surround_AI: enableSurroundAI,           
-      status: newUser.status || "Active",
-      workspaceID: selectedWorkspace.id,
-      workspaceName: selectedWorkspace.workspaceName,
-      created: isEditing && editPipeline ? editPipeline.created : new Date().toLocaleDateString(),
-      destinationType,
-      connectionString,
-    };
-
-    if (isEditing && editPipeline) {
-      const userEmail = editPipeline.user_id || editPipeline.email || 'unknown@example.com';
-
-      patchPipeline.mutate({
-        email: userEmail,
-        pipelineId: editPipeline.id,
-        pipeline,
-      }, {
-        onSuccess: (data) => {
-          toast({
-            title: "Pipeline Updated",
-            description: `${data.name} has been updated.`,
-            variant: "success",
-          });
-          setPipelines(users => users.map(u => u.id === data.id ? data : u));
-          resetForm();
-          setShowCreateUserDialog(false);
-          setIsEditing(false);
-          setEditPipeline(null);
-        },
-        onError: (error) => {
-          toast({
-            title: "API Error",
-            description: error?.message || "Failed to update pipeline on server.",
-            variant: "destructive",
-          });
-        }
-      });
-    } else {
-      savePipeline.mutateAsync(pipeline, {
-        onSuccess: (data) => {
-          toast({
-            title: "Pipeline Created",
-            description: `${data.name} has been added successfully.`,
-            variant: "success",
-          });
-          setPipelines([...pipelines, data]);
-          resetForm();
-          setShowCreateUserDialog(false);
-        },
-        onError: (error) => {
-          toast({
-            title: "API Error",
-            description: error?.message || "Failed to save pipeline to server.",
-            variant: "destructive",
-          });
-        }
-      });
-    }
-  }
-};
+  };
 
   const resetForm = () => {
     setNewUser({
@@ -535,35 +535,35 @@ function UserManagement() {
 
   const handleBack = () => {
     if (currentStep === 2) {
-    setSourceError(false);
-    setDestinationError(false);
-    setTechniquesError(false);
-  }
-  if (currentStep === 3) {
-  setAgentError(false);
-}
-if (currentStep === 4) {
-  setScheduleError(false);
-}
+      setSourceError(false);
+      setDestinationError(false);
+      setTechniquesError(false);
+    }
+    if (currentStep === 3) {
+      setAgentError(false);
+    }
+    if (currentStep === 4) {
+      setScheduleError(false);
+    }
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
- const handleTechniqueToggle = (technique) => {
-  setSelectedTechniques((prev) => {
-    const updated = prev.includes(technique)
-      ? prev.filter((t) => t !== technique)
-      : [...prev, technique];
+  const handleTechniqueToggle = (technique) => {
+    setSelectedTechniques((prev) => {
+      const updated = prev.includes(technique)
+        ? prev.filter((t) => t !== technique)
+        : [...prev, technique];
 
-    //  Clear error when at least one technique is selected
-    if (updated.length > 0) {
-      setTechniquesError(false);
-    }
+      //  Clear error when at least one technique is selected
+      if (updated.length > 0) {
+        setTechniquesError(false);
+      }
 
-    return updated;
-  });
-};
+      return updated;
+    });
+  };
 
 
   const handleDeleteUser = (userId) => {
@@ -778,20 +778,20 @@ if (currentStep === 4) {
           </div>
           {/* Create Pipeline and Refresh Buttons */}
           <div className="flex items-center gap-2">
-                          <Button
-                onClick={() => {
-                  refetchPipelines();
-                  toast({
-                    title: "Refreshing pipelines...",
-                    description: "Pipeline list is being updated.",
-                  });
-                }}
-                className="bg-white hover:bg-gray-50 text-[#2196F3] border border-[#2196F3] flex items-center gap-2 rounded-md"
-                disabled={pipelineLoading}
-              >
-                <RefreshCcw className={`h-4 w-4 text-[#2196F3] ${pipelineLoading ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
+            <Button
+              onClick={() => {
+                refetchPipelines();
+                toast({
+                  title: "Refreshing pipelines...",
+                  description: "Pipeline list is being updated.",
+                });
+              }}
+              className="bg-white hover:bg-gray-50 text-[#2196F3] border border-[#2196F3] flex items-center gap-2 rounded-md"
+              disabled={pipelineLoading}
+            >
+              <RefreshCcw className={`h-4 w-4 text-[#2196F3] ${pipelineLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
             <Dialog
               open={showCreateUserDialog}
               onOpenChange={(open) => {
@@ -809,437 +809,434 @@ if (currentStep === 4) {
                   Create Pipeline
                 </Button>
               </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] bg-white max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-gray-900 text-center">
-                  {currentStep === 1
-                    ? "Create Data Pipeline"
-                    : currentStep === 2
-                      ? "Select Security Techniques"
+              <DialogContent className="sm:max-w-[600px] bg-white max-h-[85vh] flex flex-col">
+                <DialogHeader className="flex-shrink-0">
+                  <DialogTitle className="text-gray-900 text-center">
+                    {currentStep === 1
+                      ? "Create Data Pipeline"
+                      : currentStep === 2
+                        ? "Select Security Techniques"
+                        : currentStep === 3
+                          ? "Select Processing Agent"
+                          : "Run and Close Configuration"}
+                  </DialogTitle>
+                  {currentStep === 2 && (
+                    <div className="text-right text-sm text-gray-500">
+                      Step 2 of 4
+                    </div>
+                  )}
+                  {currentStep === 3 && (
+                    <div className="text-right text-sm text-gray-500">
+                      Step 3 of 4
+                    </div>
+                  )}
+                  {currentStep === 4 && (
+                    <div className="text-right text-sm text-gray-500">
+                      Step 4 of 4
+                    </div>
+                  )}
+                  <DialogDescription className="text-gray-600 text-center">
+                    {currentStep === 1
+                      ? "Secure your data with privacy techniques."
                       : currentStep === 3
-                        ? "Select Processing Agent"
-                        : "Run and Close Configuration"}
-                </DialogTitle>
-                {currentStep === 2 && (
-                  <div className="text-right text-sm text-gray-500">
-                    Step 2 of 4
-                  </div>
-                )}
-                {currentStep === 3 && (
-                  <div className="text-right text-sm text-gray-500">
-                    Step 3 of 4
-                  </div>
-                )}
-                {currentStep === 4 && (
-                  <div className="text-right text-sm text-gray-500">
-                    Step 4 of 4
-                  </div>
-                )}
-                <DialogDescription className="text-gray-600 text-center">
-                  {currentStep === 1
-                    ? "Secure your data with privacy techniques."
-                    : currentStep === 3
-                      ? "Choose the engine or service that will perform data masking, redaction, anonymization, or tokenization."
-                      : currentStep === 4
-                        ? "Configure when and how the pipeline will run, including scheduling and closure settings."
-                        : ""}
-                </DialogDescription>
-              </DialogHeader>
+                        ? "Choose the engine or service that will perform data masking, redaction, anonymization, or tokenization."
+                        : currentStep === 4
+                          ? "Configure when and how the pipeline will run, including scheduling and closure settings."
+                          : ""}
+                  </DialogDescription>
+                </DialogHeader>
 
-              {currentStep === 1 && (
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-gray-700">
-                      Enter Pipeline Name:
-                    </Label>
-                      <Input
-                      id="name"
-                      value={newUser.name}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setNewUser({ ...newUser, name: value });
-
-                        if (value.trim()) {
-                          setNameError(false);
-                        }
-                      }}
-                      placeholder="e.g. Customer Data Anonymization"
-                      className={`input-override !bg-white !focus:border-[#2196F3] !text-gray-900 h-12 ${
-                        nameError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-                      }`}
-                      style={{
-                        backgroundColor: "white !important",
-                        color: "#111827 !important",
-                        border: "1px solid #d1d5db !important",
-                      }}
-                    />
-                    {nameError && (
-                      <p className="text-sm text-red-600 mt-1">Pipeline name is required.</p>
-                    )}
-
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 2 && (
-  <div className="space-y-8 py-6">
-    {/* Select Data Source Section */}
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-      <div className="border-b border-gray-300 pb-3 mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">Select Data Source</h3>
-      </div>
-      <p className="text-sm text-gray-600 mb-6">
-        Select the data source or enter a connection string to identify where data will be pulled from. Then choose one or more data security techniques to apply during processing.
-      </p>
-      <Select
-      value={newUser.sourceDatabase}
-      onValueChange={(value) => {
-        setNewUser({ ...newUser, sourceDatabase: value });
-
-        if (value.trim()) {
-          setSourceError(false); // Clear error as soon as a valid value is selected
-        }
-      }}
-      disabled={sourcesLoading}
-    >
-
-        <SelectTrigger
-          className={`!bg-white !text-gray-900 h-12 ${
-            sourceError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-          }`}
-          style={{ backgroundColor: "white", color: "#111827" }}
-        >
-          <SelectValue placeholder={sourcesLoading ? "Loading sources..." : "Select a data source"} />
-        </SelectTrigger>
-        <SelectContent className="bg-white">
-          {sourcesLoading && <div className="px-4 py-2 text-gray-500">Loading...</div>}
-          {sourcesError && <div className="px-4 py-2 text-red-500">Error loading sources</div>}
-          {Array.isArray(availableSources) && availableSources.length > 0 ? (
-            availableSources.map((src) => (
-              <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
-                {src?.configuration?.sourceName}
-              </SelectItem>
-            ))
-          ) : (
-            !sourcesLoading && !sourcesError && (
-              <div className="px-4 py-2 text-gray-500">No sources found</div>
-            )
-          )}
-        </SelectContent>
-      </Select>
-      {sourceError && <p className="text-sm text-red-600 mt-1">Data source is required.</p>}
-    </div>
-
-                  {/* Select Security Techniques Section */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="border-b border-gray-300 pb-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        Select Security Techniques
-                      </h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                      {[
-                        { id: "Masking", label: "Masking" },
-                        {
-                          id: "Tokenization",
-                          label: "Tokenization",
-                        },
-                        {
-                          id: "Anonymization",
-                          label: "Anonymization",
-                        },
-                        { id: "Generate", label: "Generate" },
-                      ].map((technique) => (
-                        <Button
-                          key={technique.id}
-                          variant="outline"
-                          className={`h-16 flex flex-col items-center gap-2 border-2 transition-all rounded-lg ${selectedTechniques.includes(technique.id)
-                            ? "border-[#2196F3] bg-blue-50 text-[#2196F3] shadow-md"
-                            : "border-gray-300 hover:border-[#2196F3] hover:bg-blue-25 bg-white"
-                            }`}
-                          onClick={() => handleTechniqueToggle(technique.id)}
-                        >
-                          <span className="text-xl">{technique.icon}</span>
-                          <span className="text-sm font-medium">
-                            {technique.label}
-                          </span>
-                        </Button>
-                      ))}
-                    </div>
-                    {techniquesError && <p className="text-sm text-red-600 mt-1">Select at least one technique.</p>}
-                  </div>
-
-                  {/* Destination Configuration Section */}
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="border-b border-gray-300 pb-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        Select Destination (Connection String or Dataset)
-                      </h3>
-                    </div>
-
-                    {/* Toggle between connection string and dataset */}
-                    <div className="flex gap-4 mb-6">
-                      <Button
-                        variant="outline"
-                        className={`flex items-center gap-2 px-4 py-2 ${destinationType === "connection"
-                          ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
-                          : "border-gray-300 text-gray-700"
-                          }`}
-                        onClick={() => setDestinationType("connection")}
-                      >
-                        Use connection string
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className={`flex items-center gap-2 px-4 py-2 ${destinationType === "dataset"
-                          ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
-                          : "border-gray-300 text-gray-700"
-                          }`}
-                        onClick={() => setDestinationType("dataset")}
-                      >
-                        Use existing dataset
-                      </Button>
-                    </div>
-
-      {destinationType === "connection" ? (
-        <>
-          <Input
-          value={connectionString}
-          onChange={(e) => {
-            const value = e.target.value;
-            setConnectionString(value);
-
-            //  Clear destination error when user types something valid
-            if (value.trim()) {
-              setDestinationError(false);
-            }
-          }}
-          placeholder="Enter full connection string (e.g., postgresql://user:pass@host:5432/dbname)"
-          className={`input-override !bg-white !text-gray-900 h-12 ${
-            destinationError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-          }`}
-          style={{
-            backgroundColor: "white",
-            color: "#111827",
-            border: "1px solid #d1d5db",
-          }}
-        />
-        {destinationError && (
-          <p className="text-sm text-red-600 mt-1">Connection string is required.</p>
-        )}
-        </>
-      ) : (
-        <>
-         <Select
-          value={newUser.destinationDatabase}
-          onValueChange={(value) => {
-            setNewUser({ ...newUser, destinationDatabase: value });
-
-            //  Clear error immediately when a dataset is selected
-            if (value.trim()) {
-              setDestinationError(false);
-            }
-          }}
-        >
-            <SelectTrigger
-              className={`!bg-white !text-gray-900 h-12 ${
-                destinationError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-              }`}
-              style={{ backgroundColor: "white", color: "#111827" }}
-            >
-              <SelectValue placeholder="Select from saved datasets" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              {Array.isArray(availableSources) &&
-                availableSources.map((src) => (
-                  <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
-                    {src?.configuration?.sourceName}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-          {destinationError && <p className="text-sm text-red-600 mt-1">Dataset is required.</p>}
-        </>
-      )}
-    </div>
-  </div>
-)}
-
-              {currentStep === 3 && (
-                <div className="space-y-6 py-6">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="border-b border-gray-300 pb-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Select Processing Agent</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Choose the engine or service that will perform data masking, redaction, anonymization, tokenization, or classification.
-                    </p>
-                    {isEditing ? (
-                      <>
-                        <Input value={selectedProcessingAgent} disabled className="bg-gray-100" />
-                        <div className="text-xs text-gray-500 mt-2">Agent cannot be changed during edit.</div>
-                      </>
-                    ) : (
-                      (() => {
-                        // Determine allowed agents based on selected techniques
-                        let allowedAgents = [];
-                        if (selectedTechniques.includes("Masking")) {
-                          allowedAgents.push("Redaction Agent");
-                        } if (selectedTechniques.includes("Tokenization")) {
-                          allowedAgents.push("Tokenization Agent");
-                        } if (selectedTechniques.includes("Anonymization")) {
-                          allowedAgents.push("Anonymization Agent");
-                        }
-                        allowedAgents.push("Classification Agent");
-                        // Remove duplicates
-                        allowedAgents = Array.from(new Set(allowedAgents));
-                        return (
-                      <Select
-                      value={selectedProcessingAgent}
-                      onValueChange={(value) => {
-                        setSelectedProcessingAgent(value);
-
-                        if (value.trim()) {
-                          setAgentError(false);
-                        }
-                        }}
-                           >
-                            <SelectTrigger
-                              className={`!bg-white !text-gray-900 h-12 ${
-                                agentError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-                              }`}
-                              style={{ backgroundColor: 'white', color: '#111827' }}
-                            >
-                              <SelectValue placeholder="Select a processing agent" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white">
-                              {allowedAgents.map(agent => (
-                                <SelectItem key={agent} value={agent}>{agent}</SelectItem>
-                              ))}
-                            </SelectContent>
-                            {agentError && (
-                              <p className="text-sm text-red-600 mt-1">Processing agent is required.</p>
-                            )}
-                          </Select>
-                        );
-                      })()
-                    )}
-                    {/* Custom Prompt Textarea */}
-                    <div className="mt-6">
-                      <label htmlFor="customPrompt" className="block text-gray-700 font-medium mb-2">Custom Prompt (optional)</label>
-                      <textarea
-                        id="customPrompt"
-                        className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={4}
-                        value={newUser.customPrompt}
-                        onChange={e => setNewUser({ ...newUser, customPrompt: e.target.value })}
-                        placeholder="Enter a custom prompt for this pipeline (optional)"
-                      />
-                      <div className="text-xs text-gray-400 mt-1">Characters: {newUser?.customPrompt?.length}</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentStep === 4 && (
-                <div className="space-y-6 py-6">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="border-b border-gray-300 pb-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Run and Close Configuration</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Configure when and how the pipeline will run, including scheduling and closure settings.
-                    </p>
-
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                          Run Schedule
+                <div className="flex-1 overflow-y-auto">
+                  {currentStep === 1 && (
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name" className="text-gray-700">
+                          Enter Pipeline Name:
                         </Label>
-                        <Select
-                        value={runConfiguration.schedule}
-                        onValueChange={(value) => {
-                          setRunConfiguration({ ...runConfiguration, schedule: value });
+                        <Input
+                          id="name"
+                          value={newUser.name}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setNewUser({ ...newUser, name: value });
 
-                          if (value.trim()) {
-                            setScheduleError(false);
-                          }
-                        }}
-                         >
-                          <SelectTrigger
-                            className={`!bg-white !text-gray-900 h-12 ${
-                              scheduleError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                            if (value.trim()) {
+                              setNameError(false);
+                            }
+                          }}
+                          placeholder="e.g. Customer Data Anonymization"
+                          className={`input-override !bg-white !focus:border-[#2196F3] !text-gray-900 h-12 ${nameError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
                             }`}
-                            style={{ backgroundColor: 'white', color: '#111827' }}
+                          style={{
+                            backgroundColor: "white !important",
+                            color: "#111827 !important",
+                            border: "1px solid #d1d5db !important",
+                          }}
+                        />
+                        {nameError && (
+                          <p className="text-sm text-red-600 mt-1">Pipeline name is required.</p>
+                        )}
+
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 2 && (
+                    <div className="space-y-8 py-6">
+                      {/* Select Data Source Section */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <div className="border-b border-gray-300 pb-3 mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800">Select Data Source</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-6">
+                          Select the data source or enter a connection string to identify where data will be pulled from. Then choose one or more data security techniques to apply during processing.
+                        </p>
+                        <Select
+                          value={newUser.sourceDatabase}
+                          onValueChange={(value) => {
+                            setNewUser({ ...newUser, sourceDatabase: value });
+
+                            if (value.trim()) {
+                              setSourceError(false); // Clear error as soon as a valid value is selected
+                            }
+                          }}
+                          disabled={sourcesLoading}
+                        >
+
+                          <SelectTrigger
+                            className={`!bg-white !text-gray-900 h-12 ${sourceError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                              }`}
+                            style={{ backgroundColor: "white", color: "#111827" }}
                           >
-                            <SelectValue placeholder="Select run schedule" />
+                            <SelectValue placeholder={sourcesLoading ? "Loading sources..." : "Select a data source"} />
                           </SelectTrigger>
                           <SelectContent className="bg-white">
-                            <SelectItem value="immediate">Run Immediately</SelectItem>
-                            <SelectItem value="manual">Manual Trigger Only</SelectItem>
+                            {sourcesLoading && <div className="px-4 py-2 text-gray-500">Loading...</div>}
+                            {sourcesError && <div className="px-4 py-2 text-red-500">Error loading sources</div>}
+                            {Array.isArray(availableSources) && availableSources.length > 0 ? (
+                              availableSources.map((src) => (
+                                <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
+                                  {src?.configuration?.sourceName}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              !sourcesLoading && !sourcesError && (
+                                <div className="px-4 py-2 text-gray-500">No sources found</div>
+                              )
+                            )}
                           </SelectContent>
-                          {scheduleError && (
-                            <p className="text-sm text-red-600 mt-1">Run schedule is required.</p>
-                          )}
                         </Select>
+                        {sourceError && <p className="text-sm text-red-600 mt-1">Data source is required.</p>}
                       </div>
-                    </div>
-                    <div className="flex items-center mt-4">
-                      <Checkbox
-                        id="enableSurroundAI"
-                        checked={enableSurroundAI}
-                        onCheckedChange={setEnableSurroundAI}
-                        className="border-gray-400"
-                      />
-                      <Label htmlFor="enableSurroundAI" className="ml-2">
-                        Enable Surround AI
-                      </Label>
-                    </div>
-                    {isEditing && (
-                      <div className="mt-4">
-                        <Button variant="outline" onClick={() => setShowSurroundAIConfig(true)}>
-                          Reconfigure Surround AI
-                        </Button>
-                        <Dialog open={showSurroundAIConfig} onOpenChange={setShowSurroundAIConfig}>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Reconfigure Surround AI</DialogTitle>
-                            </DialogHeader>
-                            <div className="flex items-center mt-4">
-                              <Checkbox
-                                id="editEnableSurroundAI"
-                                checked={enableSurroundAI}
-                                onCheckedChange={setEnableSurroundAI}
-                              />
-                              <Label htmlFor="editEnableSurroundAI" className="ml-2">
-                                Enable Surround AI
-                              </Label>
-                            </div>
-                            <DialogFooter>
-                              <Button onClick={() => setShowSurroundAIConfig(false)}>Done</Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
-              <DialogFooter className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
-                {(currentStep === 2 || currentStep === 3 || currentStep === 4) && (
-                  <Button
-                    variant="outline"
-                    onClick={handleBack}
-                    className="border-gray-300 text-gray-700 px-6 py-2"
-                  >
-                    ← Back
-                  </Button>
-                )}
-                {currentStep === 1 && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
+                      {/* Select Security Techniques Section */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <div className="border-b border-gray-300 pb-3 mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            Select Security Techniques
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          {[
+                            { id: "Masking", label: "Masking" },
+                            {
+                              id: "Tokenization",
+                              label: "Tokenization",
+                            },
+                            {
+                              id: "Anonymization",
+                              label: "Anonymization",
+                            },
+                            { id: "Generate", label: "Generate" },
+                          ].map((technique) => (
+                            <Button
+                              key={technique.id}
+                              variant="outline"
+                              className={`h-16 flex flex-col items-center gap-2 border-2 transition-all rounded-lg ${selectedTechniques.includes(technique.id)
+                                ? "border-[#2196F3] bg-blue-50 text-[#2196F3] shadow-md"
+                                : "border-gray-300 hover:border-[#2196F3] hover:bg-blue-25 bg-white"
+                                }`}
+                              onClick={() => handleTechniqueToggle(technique.id)}
+                            >
+                              <span className="text-xl">{technique.icon}</span>
+                              <span className="text-sm font-medium">
+                                {technique.label}
+                              </span>
+                            </Button>
+                          ))}
+                        </div>
+                        {techniquesError && <p className="text-sm text-red-600 mt-1">Select at least one technique.</p>}
+                      </div>
+
+                      {/* Destination Configuration Section */}
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <div className="border-b border-gray-300 pb-3 mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            Select Destination (Connection String or Dataset)
+                          </h3>
+                        </div>
+
+                        {/* Toggle between connection string and dataset */}
+                        <div className="flex gap-4 mb-6">
+                          <Button
+                            variant="outline"
+                            className={`flex items-center gap-2 px-4 py-2 ${destinationType === "connection"
+                              ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
+                              : "border-gray-300 text-gray-700"
+                              }`}
+                            onClick={() => setDestinationType("connection")}
+                          >
+                            Use connection string
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className={`flex items-center gap-2 px-4 py-2 ${destinationType === "dataset"
+                              ? "border-[#2196F3] bg-blue-50 text-[#2196F3]"
+                              : "border-gray-300 text-gray-700"
+                              }`}
+                            onClick={() => setDestinationType("dataset")}
+                          >
+                            Use existing dataset
+                          </Button>
+                        </div>
+
+                        {destinationType === "connection" ? (
+                          <>
+                            <Input
+                              value={connectionString}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setConnectionString(value);
+
+                                //  Clear destination error when user types something valid
+                                if (value.trim()) {
+                                  setDestinationError(false);
+                                }
+                              }}
+                              placeholder="Enter full connection string (e.g., postgresql://user:pass@host:5432/dbname)"
+                              className={`input-override !bg-white !text-gray-900 h-12 ${destinationError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                                }`}
+                              style={{
+                                backgroundColor: "white",
+                                color: "#111827",
+                                border: "1px solid #d1d5db",
+                              }}
+                            />
+                            {destinationError && (
+                              <p className="text-sm text-red-600 mt-1">Connection string is required.</p>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            <Select
+                              value={newUser.destinationDatabase}
+                              onValueChange={(value) => {
+                                setNewUser({ ...newUser, destinationDatabase: value });
+
+                                //  Clear error immediately when a dataset is selected
+                                if (value.trim()) {
+                                  setDestinationError(false);
+                                }
+                              }}
+                            >
+                              <SelectTrigger
+                                className={`!bg-white !text-gray-900 h-12 ${destinationError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                                  }`}
+                                style={{ backgroundColor: "white", color: "#111827" }}
+                              >
+                                <SelectValue placeholder="Select from saved datasets" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                {Array.isArray(availableSources) &&
+                                  availableSources.map((src) => (
+                                    <SelectItem key={src.id || src.value || src} value={src?.configuration?.sourceName}>
+                                      {src?.configuration?.sourceName}
+                                    </SelectItem>
+                                  ))}
+                              </SelectContent>
+                            </Select>
+                            {destinationError && <p className="text-sm text-red-600 mt-1">Dataset is required.</p>}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 3 && (
+                    <div className="space-y-6 py-6">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <div className="border-b border-gray-300 pb-3 mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800">Select Processing Agent</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Choose the engine or service that will perform data masking, redaction, anonymization, tokenization, or classification.
+                        </p>
+                        {isEditing ? (
+                          <>
+                            <Input value={selectedProcessingAgent} disabled className="bg-gray-100" />
+                            <div className="text-xs text-gray-500 mt-2">Agent cannot be changed during edit.</div>
+                          </>
+                        ) : (
+                          (() => {
+                            // Determine allowed agents based on selected techniques
+                            let allowedAgents = [];
+                            if (selectedTechniques.includes("Masking")) {
+                              allowedAgents.push("Redaction Agent");
+                            } if (selectedTechniques.includes("Tokenization")) {
+                              allowedAgents.push("Tokenization Agent");
+                            } if (selectedTechniques.includes("Anonymization")) {
+                              allowedAgents.push("Anonymization Agent");
+                            }
+                            allowedAgents.push("Classification Agent");
+                            // Remove duplicates
+                            allowedAgents = Array.from(new Set(allowedAgents));
+                            return (
+                              <Select
+                                value={selectedProcessingAgent}
+                                onValueChange={(value) => {
+                                  setSelectedProcessingAgent(value);
+
+                                  if (value.trim()) {
+                                    setAgentError(false);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger
+                                  className={`!bg-white !text-gray-900 h-12 ${agentError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                                    }`}
+                                  style={{ backgroundColor: 'white', color: '#111827' }}
+                                >
+                                  <SelectValue placeholder="Select a processing agent" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white">
+                                  {allowedAgents.map(agent => (
+                                    <SelectItem key={agent} value={agent}>{agent}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                                {agentError && (
+                                  <p className="text-sm text-red-600 mt-1">Processing agent is required.</p>
+                                )}
+                              </Select>
+                            );
+                          })()
+                        )}
+                        {/* Custom Prompt Textarea */}
+                        <div className="mt-6">
+                          <label htmlFor="customPrompt" className="block text-gray-700 font-medium mb-2">Custom Prompt (optional)</label>
+                          <textarea
+                            id="customPrompt"
+                            className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows={4}
+                            value={newUser.customPrompt}
+                            onChange={e => setNewUser({ ...newUser, customPrompt: e.target.value })}
+                            maxLength={1000}
+                            placeholder="Enter a custom prompt for this pipeline (optional)"
+                          />
+                          <div className="text-xs text-gray-400 mt-1">Characters: {newUser?.customPrompt?.length}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {currentStep === 4 && (
+                    <div className="space-y-6 py-6">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <div className="border-b border-gray-300 pb-3 mb-4">
+                          <h3 className="text-lg font-semibold text-gray-800">Run and Close Configuration</h3>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                          Configure when and how the pipeline will run, including scheduling and closure settings.
+                        </p>
+
+                        <div className="space-y-4">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                              Run Schedule
+                            </Label>
+                            <Select
+                              value={runConfiguration.schedule}
+                              onValueChange={(value) => {
+                                setRunConfiguration({ ...runConfiguration, schedule: value });
+
+                                if (value.trim()) {
+                                  setScheduleError(false);
+                                }
+                              }}
+                            >
+                              <SelectTrigger
+                                className={`!bg-white !text-gray-900 h-12 ${scheduleError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                                  }`}
+                                style={{ backgroundColor: 'white', color: '#111827' }}
+                              >
+                                <SelectValue placeholder="Select run schedule" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                <SelectItem value="immediate">Run Immediately</SelectItem>
+                                <SelectItem value="manual">Manual Trigger Only</SelectItem>
+                              </SelectContent>
+                              {scheduleError && (
+                                <p className="text-sm text-red-600 mt-1">Run schedule is required.</p>
+                              )}
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex items-center mt-4">
+                          <Checkbox
+                            id="enableSurroundAI"
+                            checked={enableSurroundAI}
+                            onCheckedChange={setEnableSurroundAI}
+                            className="border-gray-400"
+                          />
+                          <Label htmlFor="enableSurroundAI" className="ml-2">
+                            Enable Surround AI
+                          </Label>
+                        </div>
+                        {isEditing && (
+                          <div className="mt-4">
+                            <Button variant="outline" onClick={() => setShowSurroundAIConfig(true)}>
+                              Reconfigure Surround AI
+                            </Button>
+                            <Dialog open={showSurroundAIConfig} onOpenChange={setShowSurroundAIConfig}>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Reconfigure Surround AI</DialogTitle>
+                                </DialogHeader>
+                                <div className="flex items-center mt-4">
+                                  <Checkbox
+                                    id="editEnableSurroundAI"
+                                    checked={enableSurroundAI}
+                                    onCheckedChange={setEnableSurroundAI}
+                                  />
+                                  <Label htmlFor="editEnableSurroundAI" className="ml-2">
+                                    Enable Surround AI
+                                  </Label>
+                                </div>
+                                <DialogFooter>
+                                  <Button onClick={() => setShowSurroundAIConfig(false)}>Done</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 flex-shrink-0">
+                  {(currentStep === 2 || currentStep === 3 || currentStep === 4) && (
+                    <Button
+                      variant="outline"
+                      onClick={handleBack}
+                      className="border-gray-300 text-gray-700 px-6 py-2"
+                    >
+                      ← Back
+                    </Button>
+                  )}
+                  {currentStep === 1 && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
                         resetForm(); // ← resets nameError and form state
                         setShowCreateUserDialog(false);
                       }}
@@ -1248,21 +1245,21 @@ if (currentStep === 4) {
                       Cancel
                     </Button>
                   )}
-                <Button
-                  onClick={handleCreateUserPipeline}
-                  className="bg-[#2196F3] hover:bg-[#1976D2] text-white px-8 py-2 font-medium"
-                >
-                  {currentStep === 1
-                    ? isEditing
-                      ? "Edit Pipeline"
-                      : "Create Pipeline"
-                    : currentStep === 4
-                      ? "Complete Pipeline"
-                      : "Next →"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                  <Button
+                    onClick={handleCreateUserPipeline}
+                    className="bg-[#2196F3] hover:bg-[#1976D2] text-white px-8 py-2 font-medium"
+                  >
+                    {currentStep === 1
+                      ? isEditing
+                        ? "Edit Pipeline"
+                        : "Create Pipeline"
+                      : currentStep === 4
+                        ? "Complete Pipeline"
+                        : "Next →"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 
