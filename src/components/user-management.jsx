@@ -61,6 +61,7 @@ import usePatchPipeline from '../hooks/usePatchPipeline';
 import { format } from 'date-fns';
 
 import { BACKEND_URL } from '../constants';
+import { PipelineDetailsModal } from './pipeline-details-modal';
 
 
 function UserManagement() {
@@ -1419,31 +1420,11 @@ if (currentStep === 4) {
       {!isApplyingPrompt && !showSuccessTransition && (
         <>
           {/* View Pipeline Modal */}
-          <Dialog open={!!viewPipeline} onOpenChange={(open) => { if (!open) setViewPipeline(null); }}>
-            <DialogContent className="sm:max-w-[500px] bg-white">
-              <DialogHeader>
-                <DialogTitle className="text-gray-900">Pipeline Details</DialogTitle>
-                <DialogDescription className="text-gray-600">
-                  View configuration and details for this pipeline.
-                </DialogDescription>
-              </DialogHeader>
-              {viewPipeline && (
-                <div className="space-y-4 py-2">
-                  <div><span className="font-semibold">Pipeline Name:</span> {viewPipeline.name}</div>
-                  <div><span className="font-semibold">Source:</span> {viewPipeline.source}</div>
-                  <div><span className="font-semibold">Destination:</span> {viewPipeline.destination}</div>
-                  <div><span className="font-semibold">Technique:</span> {viewPipeline.technique}</div>
-                  {/* <div><span className="font-semibold">Agent:</span> {viewPipeline.processingAgent || "Not specified"}</div>
-                  <div><span className="font-semibold">Schedule:</span> {viewPipeline.schedule || "Not configured"}</div> */}
-                  <div><span className="font-semibold">Status:</span> {viewPipeline.status}</div>
-                  <div><span className="font-semibold">Created:</span> {viewPipeline.created}</div>
-                </div>
-              )}
-              <DialogFooter>
-                <Button onClick={() => setViewPipeline(null)} className="bg-[#2196F3] hover:bg-[#1976D2] text-white w-full">Close</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <PipelineDetailsModal
+            pipeline={viewPipeline}
+            isOpen={!!viewPipeline}
+            onClose={() => setViewPipeline(null)}
+          />
           {/* Edit AI Prompt Modal */}
           <Dialog open={showPromptModal} onOpenChange={setShowPromptModal}>
             <DialogContent className="sm:max-w-[600px] bg-white">
