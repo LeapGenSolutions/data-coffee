@@ -18,7 +18,7 @@ import SidebarNav from "./SidebarNav";
 const navigationBase = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Admin Panel", href: "/admin", icon: Settings, role: "barista" },
-  { name: "User Management", href: "/user-management", icon: Users },
+  { name: "Pipeline Management", href: "/pipeline-management", icon: Users },
   { name: "Control Panel", href: "/control-panel", icon: LayoutGrid },
 ];
 
