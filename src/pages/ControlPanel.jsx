@@ -130,9 +130,9 @@ export default function ControlPanel() {
   const getStatusBadge = (status) => {
     const statusConfig = {
       running: { variant: "default", className: "bg-blue-100 text-blue-800", icon: Activity },
-      completed: { variant: "success", className: "bg-green-100 text-green-800", icon: CheckCircle },
+      success: { variant: "success", className: "bg-green-100 text-green-800", icon: CheckCircle },
       failed: { variant: "destructive", className: "bg-red-100 text-red-800", icon: AlertCircle },
-      pending: { variant: "secondary", className: "bg-yellow-100 text-yellow-800", icon: Clock }
+      pending: { variant: "secondary", className: "bg-yellow-100 text-yellow-800", icon: Clock },
     };
 
     const config = statusConfig[status] || statusConfig.pending;
@@ -148,7 +148,7 @@ export default function ControlPanel() {
   return (
     <DashboardLayout>
       <div className="max-w-5xl mx-auto space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[["CPU Usage", cpuUsage], ["Memory Usage", memoryUsage], ["Disk Usage", diskUsage]].map(([title, usage], idx) => (
             <Card
               key={title}
@@ -173,7 +173,7 @@ export default function ControlPanel() {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </div> */}
 
         <Tabs defaultValue="monitoring" className="w-full">
           <TabsList className="inline-flex border border-gray-200 bg-white rounded-lg p-1 shadow-sm">

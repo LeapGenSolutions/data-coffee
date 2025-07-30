@@ -749,7 +749,7 @@ if (currentStep === 4) {
       <div className="bg-gradient-to-r from-[#2196F3] to-[#1976D2] text-white p-6 rounded-lg">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">User Management</h1>
+            <h1 className="text-2xl font-bold">Pipeline Management</h1>
             <p className="text-blue-100 mt-1">
               Manage data pipelines for secure data handling
             </p>
@@ -817,17 +817,17 @@ if (currentStep === 4) {
                 </DialogTitle>
                 {currentStep === 2 && (
                   <div className="text-right text-sm text-gray-500">
-                    Step 2 of 6
+                    Step 2 of 4
                   </div>
                 )}
                 {currentStep === 3 && (
                   <div className="text-right text-sm text-gray-500">
-                    Step 3 of 6
+                    Step 3 of 4
                   </div>
                 )}
                 {currentStep === 4 && (
                   <div className="text-right text-sm text-gray-500">
-                    Step 4 of 6
+                    Step 4 of 4
                   </div>
                 )}
                 <DialogDescription className="text-gray-600 text-center">
@@ -1128,7 +1128,7 @@ if (currentStep === 4) {
                         rows={4}
                         value={newUser.customPrompt}
                         onChange={e => setNewUser({ ...newUser, customPrompt: e.target.value })}
-                        maxLength={1000}
+                        // maxLength={1000}
                         placeholder="Enter a custom prompt for this pipeline (optional)"
                       />
                       <div className="text-xs text-gray-400 mt-1">Characters: {newUser?.customPrompt?.length}</div>
@@ -1172,9 +1172,9 @@ if (currentStep === 4) {
                           </SelectTrigger>
                           <SelectContent className="bg-white">
                             <SelectItem value="immediate">Run Immediately</SelectItem>
-                            <SelectItem value="daily">Daily</SelectItem>
+                            {/* <SelectItem value="daily">Daily</SelectItem>
                             <SelectItem value="weekly">Weekly</SelectItem>
-                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem> */}
                             <SelectItem value="manual">Manual Trigger Only</SelectItem>
                           </SelectContent>
                           {scheduleError && (
@@ -1184,7 +1184,7 @@ if (currentStep === 4) {
                       </div>
 
                       <div className="space-y-3">
-                        <div className="flex items-center space-x-3">
+                        {/* <div className="flex items-center space-x-3">
                           <Checkbox
                             id="notifications"
                             checked={runConfiguration.notifications}
@@ -1194,8 +1194,8 @@ if (currentStep === 4) {
                           <Label htmlFor="notifications" className="text-sm text-gray-700 font-medium">
                             Send notifications on completion
                           </Label>
-                        </div>
-                        <div className="flex items-center space-x-3">
+                        </div> */}
+                        {/* <div className="flex items-center space-x-3">
                           <Checkbox
                             id="autoClose"
                             checked={runConfiguration.autoClose}
@@ -1205,7 +1205,7 @@ if (currentStep === 4) {
                           <Label htmlFor="autoClose" className="text-sm text-gray-700 font-medium">
                             Auto-close pipeline after successful completion
                           </Label>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                     <div className="flex items-center mt-4">
