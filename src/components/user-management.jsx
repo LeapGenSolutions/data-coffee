@@ -53,6 +53,7 @@ import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
 import useFetchPipeline from "../hooks/useFetchPipeline";
 import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
+import { useClonePipeline } from "../hooks/useSavePipeline";
 // Custom prompt fetch hook
 
 // Handler for Use Prompt button
@@ -161,6 +162,8 @@ function UserManagement() {
       (pipeline.destination && pipeline.destination.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (pipeline.technique && pipeline.technique.toLowerCase().includes(searchTerm.toLowerCase())),
   );
+
+  const { mutateAsync: clonePipeline } = useClonePipeline();
 
   // Sort users
   const sortedUsers = filteredUsers && filteredUsers.length > 0 ? [...filteredUsers].sort((a, b) => {
@@ -594,36 +597,20 @@ if (currentStep === 4) {
 
   const handleClonePipeline = async (pipeline) => {
     try {
-      const response = await fetch(
-        `${BACKEND_URL}/api/pipeline/${pipeline.user_id}/${pipeline.id}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Clone failed");
-      }
-
-      const clonedPipeline = await response.json();
-
-      // This updates the table
+      const cloned = await clonePipeline({ user_id: pipeline.user_id, pipeline_id: pipeline.id });
       await refetchPipelines();
-
       toast({
         title: "Pipeline Cloned",
         description: (
           <span>
-            <b>{clonedPipeline.name}</b> was created successfully.
+            <b>{cloned.name}</b> was created successfully.
           </span>
         ),
       });
     } catch (err) {
-      console.error("Clone Error:", err);
       toast({
         title: "Clone Failed",
-        description: err.message || "Something went wrong while cloning.",
+        description: err.message || "Something went wrong",
         variant: "destructive",
       });
     }
