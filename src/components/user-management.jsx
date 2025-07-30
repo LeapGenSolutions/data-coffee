@@ -804,8 +804,8 @@ if (currentStep === 4) {
                 Create Pipeline
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] bg-white max-h-[85vh] overflow-y-auto">
-              <DialogHeader>
+            <DialogContent className="sm:max-w-[600px] bg-white max-h-[85vh] flex flex-col">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle className="text-gray-900 text-center">
                   {currentStep === 1
                     ? "Create Data Pipeline"
@@ -841,42 +841,43 @@ if (currentStep === 4) {
                 </DialogDescription>
               </DialogHeader>
 
-              {currentStep === 1 && (
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-gray-700">
-                      Enter Pipeline Name:
-                    </Label>
-                      <Input
-                      id="name"
-                      value={newUser.name}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setNewUser({ ...newUser, name: value });
+              <div className="flex-1 overflow-y-auto">
+                {currentStep === 1 && (
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-gray-700">
+                        Enter Pipeline Name:
+                      </Label>
+                        <Input
+                        id="name"
+                        value={newUser.name}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setNewUser({ ...newUser, name: value });
 
-                        if (value.trim()) {
-                          setNameError(false);
-                        }
-                      }}
-                      placeholder="e.g. Customer Data Anonymization"
-                      className={`input-override !bg-white !focus:border-[#2196F3] !text-gray-900 h-12 ${
-                        nameError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-                      }`}
-                      style={{
-                        backgroundColor: "white !important",
-                        color: "#111827 !important",
-                        border: "1px solid #d1d5db !important",
-                      }}
-                    />
-                    {nameError && (
-                      <p className="text-sm text-red-600 mt-1">Pipeline name is required.</p>
-                    )}
+                          if (value.trim()) {
+                            setNameError(false);
+                          }
+                        }}
+                        placeholder="e.g. Customer Data Anonymization"
+                        className={`input-override !bg-white !focus:border-[#2196F3] !text-gray-900 h-12 ${
+                          nameError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                        }`}
+                        style={{
+                          backgroundColor: "white !important",
+                          color: "#111827 !important",
+                          border: "1px solid #d1d5db !important",
+                        }}
+                      />
+                      {nameError && (
+                        <p className="text-sm text-red-600 mt-1">Pipeline name is required.</p>
+                      )}
 
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {currentStep === 2 && (
+                {currentStep === 2 && (
   <div className="space-y-8 py-6">
     {/* Select Data Source Section */}
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
@@ -1060,84 +1061,84 @@ if (currentStep === 4) {
   </div>
 )}
 
-              {currentStep === 3 && (
-                <div className="space-y-6 py-6">
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                    <div className="border-b border-gray-300 pb-3 mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Select Processing Agent</h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-4">
-                      Choose the engine or service that will perform data masking, redaction, anonymization, tokenization, or classification.
-                    </p>
-                    {isEditing ? (
-                      <>
-                        <Input value={selectedProcessingAgent} disabled className="bg-gray-100" />
-                        <div className="text-xs text-gray-500 mt-2">Agent cannot be changed during edit.</div>
-                      </>
-                    ) : (
-                      (() => {
-                        // Determine allowed agents based on selected techniques
-                        let allowedAgents = [];
-                        if (selectedTechniques.includes("Masking")) {
-                          allowedAgents.push("Redaction Agent");
-                        } if (selectedTechniques.includes("Tokenization")) {
-                          allowedAgents.push("Tokenization Agent");
-                        } if (selectedTechniques.includes("Anonymization")) {
-                          allowedAgents.push("Anonymization Agent");
-                        }
-                        allowedAgents.push("Classification Agent");
-                        // Remove duplicates
-                        allowedAgents = Array.from(new Set(allowedAgents));
-                        return (
-                      <Select
-                      value={selectedProcessingAgent}
-                      onValueChange={(value) => {
-                        setSelectedProcessingAgent(value);
+                {currentStep === 3 && (
+                  <div className="space-y-6 py-6">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                      <div className="border-b border-gray-300 pb-3 mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800">Select Processing Agent</h3>
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Choose the engine or service that will perform data masking, redaction, anonymization, tokenization, or classification.
+                      </p>
+                      {isEditing ? (
+                        <>
+                          <Input value={selectedProcessingAgent} disabled className="bg-gray-100" />
+                          <div className="text-xs text-gray-500 mt-2">Agent cannot be changed during edit.</div>
+                        </>
+                      ) : (
+                        (() => {
+                          // Determine allowed agents based on selected techniques
+                          let allowedAgents = [];
+                          if (selectedTechniques.includes("Masking")) {
+                            allowedAgents.push("Redaction Agent");
+                          } if (selectedTechniques.includes("Tokenization")) {
+                            allowedAgents.push("Tokenization Agent");
+                          } if (selectedTechniques.includes("Anonymization")) {
+                            allowedAgents.push("Anonymization Agent");
+                          }
+                          allowedAgents.push("Classification Agent");
+                          // Remove duplicates
+                          allowedAgents = Array.from(new Set(allowedAgents));
+                          return (
+                        <Select
+                        value={selectedProcessingAgent}
+                        onValueChange={(value) => {
+                          setSelectedProcessingAgent(value);
 
-                        if (value.trim()) {
-                          setAgentError(false);
-                        }
-                        }}
-                           >
-                            <SelectTrigger
-                              className={`!bg-white !text-gray-900 h-12 ${
-                                agentError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
-                              }`}
-                              style={{ backgroundColor: 'white', color: '#111827' }}
-                            >
-                              <SelectValue placeholder="Select a processing agent" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white">
-                              {allowedAgents.map(agent => (
-                                <SelectItem key={agent} value={agent}>{agent}</SelectItem>
-                              ))}
-                            </SelectContent>
-                            {agentError && (
-                              <p className="text-sm text-red-600 mt-1">Processing agent is required.</p>
-                            )}
-                          </Select>
-                        );
-                      })()
-                    )}
-                    {/* Custom Prompt Textarea */}
-                    <div className="mt-6">
-                      <label htmlFor="customPrompt" className="block text-gray-700 font-medium mb-2">Custom Prompt (optional)</label>
-                      <textarea
-                        id="customPrompt"
-                        className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        rows={4}
-                        value={newUser.customPrompt}
-                        onChange={e => setNewUser({ ...newUser, customPrompt: e.target.value })}
-                        maxLength={1000}
-                        placeholder="Enter a custom prompt for this pipeline (optional)"
-                      />
-                      <div className="text-xs text-gray-400 mt-1">Characters: {newUser?.customPrompt?.length}</div>
+                          if (value.trim()) {
+                            setAgentError(false);
+                          }
+                          }}
+                             >
+                              <SelectTrigger
+                                className={`!bg-white !text-gray-900 h-12 ${
+                                  agentError ? "!border-red-500 ring-1 ring-red-500" : "!border-gray-300"
+                                }`}
+                                style={{ backgroundColor: 'white', color: '#111827' }}
+                              >
+                                <SelectValue placeholder="Select a processing agent" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                {allowedAgents.map(agent => (
+                                  <SelectItem key={agent} value={agent}>{agent}</SelectItem>
+                                ))}
+                              </SelectContent>
+                              {agentError && (
+                                <p className="text-sm text-red-600 mt-1">Processing agent is required.</p>
+                              )}
+                            </Select>
+                          );
+                        })()
+                      )}
+                      {/* Custom Prompt Textarea */}
+                      <div className="mt-6">
+                        <label htmlFor="customPrompt" className="block text-gray-700 font-medium mb-2">Custom Prompt (optional)</label>
+                        <textarea
+                          id="customPrompt"
+                          className="w-full border rounded-lg p-3 text-gray-900 text-base focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          rows={4}
+                          value={newUser.customPrompt}
+                          onChange={e => setNewUser({ ...newUser, customPrompt: e.target.value })}
+                          maxLength={1000}
+                          placeholder="Enter a custom prompt for this pipeline (optional)"
+                        />
+                        <div className="text-xs text-gray-400 mt-1">Characters: {newUser?.customPrompt?.length}</div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {currentStep === 4 && (
+                {currentStep === 4 && (
                 <div className="space-y-6 py-6">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                     <div className="border-b border-gray-300 pb-3 mb-4">
@@ -1249,8 +1250,9 @@ if (currentStep === 4) {
                   </div>
                 </div>
               )}
+                </div>
 
-              <DialogFooter className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200">
+              <DialogFooter className="flex justify-between items-center mt-8 pt-6 border-t border-gray-200 flex-shrink-0">
                 {(currentStep === 2 || currentStep === 3 || currentStep === 4) && (
                   <Button
                     variant="outline"
