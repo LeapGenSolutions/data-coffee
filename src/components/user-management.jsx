@@ -10,7 +10,7 @@ import {
   Copy,
   Sparkles,
   Loader2,
-  RotateCcw,
+  RefreshCcw,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -789,23 +789,39 @@ if (currentStep === 4) {
               ))}
             </select>
           </div>
-          <Dialog
-            open={showCreateUserDialog}
-            onOpenChange={(open) => {
-              setShowCreateUserDialog(open);
-              if (!open) {
-                resetForm();
-                setIsEditing(false);
-                setEditPipeline(null);
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Create Pipeline
+          {/* Create Pipeline and Refresh Buttons */}
+          <div className="flex items-center gap-2">
+                          <Button
+                onClick={() => {
+                  refetchPipelines();
+                  toast({
+                    title: "Refreshing pipelines...",
+                    description: "Pipeline list is being updated.",
+                  });
+                }}
+                className="bg-white hover:bg-gray-50 text-[#2196F3] border border-[#2196F3] flex items-center gap-2 rounded-md"
+                disabled={pipelineLoading}
+              >
+                <RefreshCcw className={`h-4 w-4 text-[#2196F3] ${pipelineLoading ? 'animate-spin' : ''}`} />
+                Refresh
               </Button>
-            </DialogTrigger>
+            <Dialog
+              open={showCreateUserDialog}
+              onOpenChange={(open) => {
+                setShowCreateUserDialog(open);
+                if (!open) {
+                  resetForm();
+                  setIsEditing(false);
+                  setEditPipeline(null);
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <Button className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Pipeline
+                </Button>
+              </DialogTrigger>
             <DialogContent className="sm:max-w-[600px] bg-white max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="text-gray-900 text-center">
@@ -1289,6 +1305,7 @@ if (currentStep === 4) {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Users Table */}
@@ -1386,7 +1403,7 @@ if (currentStep === 4) {
                             onClick={() => handleRunPipeline(pipeline)}
                             className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
                           >
-                            <RotateCcw className="h-4 w-4 text-blue-500" /> Run Manually
+                            <RefreshCcw className="h-4 w-4 text-blue-500" /> Run Manually
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1643,7 +1660,7 @@ if (currentStep === 4) {
                         ));
                       }, 2500);
                     }}>
-                      <RotateCcw className="h-4 w-4 text-blue-500" /> Re-run
+                      <RefreshCcw className="h-4 w-4 text-blue-500" /> Re-run
                     </Button>
                   </div>
                 </>
