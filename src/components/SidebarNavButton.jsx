@@ -8,13 +8,13 @@ export default function SidebarNavButton({
   workspaces,
   wouterNavigate,
   onMobileClose,
-  type // 'admin' or 'user-management'
+  type // 'admin' or 'pipeline-management'
 }) {
   const isActive = type === 'admin'
     ? location.startsWith("/admin")
-    : (location.startsWith("/user-management") || location.startsWith("/user"));
+    : (location.startsWith("/pipeline-management") || location.startsWith("/pipeline"));
   const IconComponent = item.icon;
-  const fallback = type === 'admin' ? '/admin' : '/user-management';
+  const fallback = type === 'admin' ? '/admin' : '/pipeline-management';
   return (
     <Button
       key={item.name}

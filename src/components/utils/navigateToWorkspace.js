@@ -1,7 +1,7 @@
 export function navigateToWorkspace(wsId, location, wouterNavigate) {
   if (wsId) {
-    if (location.match("/user-management") || location === "/user") {
-      wouterNavigate(`/user-management`);
+    if (location.match("/pipeline-management") || location === "/pipeline") {
+      wouterNavigate(`/pipeline-management`);
     } else {
       wouterNavigate(`/admin`);
     }

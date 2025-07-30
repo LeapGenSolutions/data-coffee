@@ -23,7 +23,7 @@ export default function SidebarNav({ navigation, location, workspaces, wouterNav
             />
           );
         }
-        if (item.name === "User Management") {
+        if (item.name === "Pipeline Management") {
           return (
             <SidebarNavButton
               key={item.name}
@@ -32,7 +32,7 @@ export default function SidebarNav({ navigation, location, workspaces, wouterNav
               workspaces={workspaces}
               wouterNavigate={wouterNavigate}
               onMobileClose={onMobileClose}
-              type="user-management"
+              type="pipeline-management"
             />
           );
         }
