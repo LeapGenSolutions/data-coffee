@@ -48,6 +48,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
+import SurroundAIWidget from './surroundAI-widget';
 import { CSSTransition } from 'react-transition-group';
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
@@ -63,6 +64,8 @@ import { format } from 'date-fns';
 
 import { BACKEND_URL } from '../constants';
 import { PipelineDetailsModal } from './pipeline-details-modal';
+import { on } from 'process';
+import { set } from 'date-fns';
 
 
 function UserManagement() {
@@ -107,6 +110,8 @@ function UserManagement() {
   const [showSuccessTransition, setShowSuccessTransition] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
+  const [showSurroundAI, setShowSurroundAI] = useState(false);
+  const [pipelineForWidget, setPipelineForWidget] = useState(null);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
   const [selectedWorkspace, setSelectedWorkspace] = useState(() => {
@@ -123,6 +128,8 @@ function UserManagement() {
 
   const savePipeline = useSavePipeline();
   const patchPipeline = usePatchPipeline();
+
+  const fetchCustomPrompt = useFetchCustomPrompt();
 
   // Set the first workspace when workspaces are loaded
   useEffect(() => {
@@ -550,11 +557,17 @@ function UserManagement() {
     }
   };
 
-  const handleTechniqueToggle = (technique) => {
-    setSelectedTechniques((prev) => {
-      const updated = prev.includes(technique)
-        ? prev.filter((t) => t !== technique)
-        : [...prev, technique];
+  const handleOpenSurroundAI = (pipeline) => {
+    setShowSurroundAI(true);
+    setPipelineForWidget(pipeline);
+    setShowPromptListModal(false);
+  };
+
+ const handleTechniqueToggle = (technique) => {
+  setSelectedTechniques((prev) => {
+    const updated = prev.includes(technique)
+      ? prev.filter((t) => t !== technique)
+      : [...prev, technique];
 
       //  Clear error when at least one technique is selected
       if (updated.length > 0) {
@@ -1472,10 +1485,7 @@ function UserManagement() {
                           <Button
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
-                            onClick={() => {
-                              const newId = promptPipeline?.id;
-                              window.open(`https://octopus-nonred-strlit-czh5frcegse9cwdb.centralus-01.azurewebsites.net/?pipeline_type=redaction&pipeline_id=${encodeURIComponent(newId)}`, '_blank');
-                            }}
+                            onClick={() => handleOpenSurroundAI(promptPipeline)}
                           >
                             Open Surround AI
                           </Button>
@@ -1634,6 +1644,9 @@ function UserManagement() {
               </Button>
             </DialogContent>
           </Dialog>
+          {showSurroundAI && pipelineForWidget && (
+            <SurroundAIWidget pipeline={pipelineForWidget} onClose={() => setShowSurroundAI(false)} />
+          )}
         </>
       )}
     </div>
