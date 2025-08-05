@@ -289,7 +289,7 @@ function UserManagement() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      active: { className: "bg-[#4CAF50] text-white", label: "Completed" },
+      active: { className: "bg-[#4CAF50] text-white", label: "Created" },
       inactive: { className: "bg-[#F44336] text-white", label: "Inactive" },
       pending: { className: "bg-[#FF9800] text-white", label: "Pending" },
       new: { className: "bg-blue-500 text-white", label: "New" },
