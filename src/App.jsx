@@ -32,6 +32,8 @@ function Router() {
       />
       <Route path="/admin/source/edit/:id" component={hasBaristaRole ? AdminPanel : NotAuthorized}
       />
+      <Route path="/admin/workspace" component={hasBaristaRole ? AdminPanel : NotAuthorized}
+      />
       <Route path="/admin-panel" component={hasBaristaRole ? AdminPanel : NotAuthorized}
       />
       <Route path="/pipeline-management" component={PipelineManagementPage} />

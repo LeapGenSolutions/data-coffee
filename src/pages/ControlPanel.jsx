@@ -140,7 +140,7 @@ export default function ControlPanel() {
 
     return (
       <Badge variant={config.variant} className={`${config.className} flex items-center gap-1`}>
-        <IconComponent/>
+        <IconComponent />
         <span>{status === 'success' ? 'Completed' : status.charAt(0).toUpperCase() + status.slice(1)}</span>
       </Badge>
     );
@@ -149,39 +149,6 @@ export default function ControlPanel() {
     <DashboardLayout>
       <div className="max-w-5xl mx-auto space-y-6">
         <Tabs defaultValue="monitoring" className="w-full">
-          <TabsList className="inline-flex border border-gray-200 bg-white rounded-lg p-1 shadow-sm">
-            <TabsTrigger
-              value="monitoring"
-              className="text-[#2196F3] px-4 py-2 rounded-md data-[state=active]:bg-blue-100 font-medium"
-            >
-              Pipeline Monitoring
-            </TabsTrigger>
-            <TabsTrigger
-              value="general"
-              className="text-[#2196F3] px-4 py-2 rounded-md data-[state=active]:bg-blue-100 font-medium"
-            >
-              General
-            </TabsTrigger>
-            <TabsTrigger
-              value="security"
-              className="text-[#2196F3] px-4 py-2 rounded-md data-[state=active]:bg-blue-100 font-medium"
-            >
-              Security
-            </TabsTrigger>
-            <TabsTrigger
-              value="backup"
-              className="text-[#2196F3] px-4 py-2 rounded-md data-[state=active]:bg-blue-100 font-medium"
-            >
-              Backup & Recovery
-            </TabsTrigger>
-            <TabsTrigger
-              value="api"
-              className="text-[#2196F3] px-4 py-2 rounded-md data-[state=active]:bg-blue-100 font-medium"
-            >
-              API Settings
-            </TabsTrigger>
-          </TabsList>
-
           <TabsContent value="monitoring">
             <Card className="rounded-xl shadow-sm border border-gray-200">
               <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
