@@ -51,6 +51,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
+import SurroundAIWidget from './surroundAI-widget';
 import { CSSTransition } from 'react-transition-group';
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
@@ -110,6 +111,8 @@ function UserManagement() {
   const [showSuccessTransition, setShowSuccessTransition] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
+  const [showSurroundAI, setShowSurroundAI] = useState(false);
+  const [pipelineForWidget, setPipelineForWidget] = useState(null);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
   const [selectedWorkspace, setSelectedWorkspace] = useState(() => {
@@ -123,7 +126,8 @@ function UserManagement() {
     isLoading: pipelineLoading,
     error: pipelineError,
     refetch: refetchPipelines } = useFetchPipeline(selectedWorkspace.id);
-
+  const [numRows, setNumRows] = useState("");
+  const [useAllRows, setUseAllRows] = useState(false);
   const savePipeline = useSavePipeline();
   const patchPipeline = usePatchPipeline();
     const [techniqueToShow, setTechniqueToShow] = useState(null);
@@ -133,7 +137,6 @@ function UserManagement() {
     const [azureFiles, setAzureFiles] = useState([]);
     const [isAzureFilesLoaded, setIsAzureFilesLoaded] = useState(false);
     const listAzureBlobFiles = useListAzureBlobFiles();
-    const [dataSelectionError, setDataSelectionError] = useState(false);
     const [dataSelectionOptions, setDataSelectionOptions] = useState({
           selectionMode: "all",
           selectedTables: [],
@@ -221,7 +224,7 @@ function UserManagement() {
       setTechniqueToShow(null);
       return;
     }
-    if(source.configuration.sourceType === "files"){
+    if(source?.configuration?.sourceType === "files"){
       setTechniqueToShow([
         { id: "Masking", label: "Masking" }
       ]);
@@ -340,7 +343,7 @@ function UserManagement() {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      active: { className: "bg-[#4CAF50] text-white", label: "Completed" },
+      active: { className: "bg-[#4CAF50] text-white", label: "Created" },
       inactive: { className: "bg-[#F44336] text-white", label: "Inactive" },
       pending: { className: "bg-[#FF9800] text-white", label: "Pending" },
       new: { className: "bg-blue-500 text-white", label: "New" },
@@ -665,11 +668,17 @@ const handleBack = () => {
     }
   };
 
-  const handleTechniqueToggle = (technique) => {
-    setSelectedTechniques((prev) => {
-      const updated = prev.includes(technique)
-        ? prev.filter((t) => t !== technique)
-        : [...prev, technique];
+  const handleOpenSurroundAI = (pipeline) => {
+    setShowSurroundAI(true);
+    setPipelineForWidget(pipeline);
+    setShowPromptListModal(false);
+  };
+
+ const handleTechniqueToggle = (technique) => {
+  setSelectedTechniques((prev) => {
+    const updated = prev.includes(technique)
+      ? prev.filter((t) => t !== technique)
+      : [...prev, technique];
 
       //  Clear error when at least one technique is selected
       if (updated.length > 0) {
@@ -880,10 +889,6 @@ const handleBack = () => {
             {
               value: "specific",
               label: "Select Specific Sheets/Columns - For Excel or structured formats",
-            },
-            {
-              value: "query",
-              label: "Apply Row Filters - e.g., load rows with status = \"active\"",
             },
           ];
         case "blob":
@@ -1173,8 +1178,9 @@ const handleBack = () => {
                     {getDataSelectionOptions(sourceType)[1]?.label || "Select Specific Items"}
                   </label>
                 </div>
-    
-                <div className="flex items-center space-x-2">
+
+                {sourceType !== "files" && (
+                  <div className="flex items-center space-x-2">
                   <input
                     type="radio"
                     id="select-query"
@@ -1191,6 +1197,7 @@ const handleBack = () => {
                     {getDataSelectionOptions(sourceType)[2]?.label || "Custom Query"}
                   </label>
                 </div>
+              )}
               </div>
     
               {/* Show appropriate UI based on selection mode */}
@@ -1201,49 +1208,6 @@ const handleBack = () => {
                       <p className="text-sm text-gray-600">
                         All files will be uploaded and processed. Choose your file below:
                       </p>
-                    </div>
-    
-                    {/* File Upload Component */}
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors">
-                      <div className="text-center">
-                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <div className="mt-4">
-                          <label htmlFor="file-upload" className="cursor-pointer">
-                            <span className="mt-2 block text-sm font-medium text-gray-900">
-                              Drop files here or click to upload
-                            </span>
-                            <input
-                              id="file-upload"
-                              name="file-upload"
-                              type="file"
-                              className="sr-only"
-                              multiple
-                              accept=".csv,.xlsx,.xls,.json,.parquet,.xml,.txt,.png,.jpeg,.jpg,.pdf"
-                              onChange={(e) => {
-                                const files = Array.from(e.target.files);
-                                setUploadedFiles(files);
-                                // Handle file upload logic here
-                              }}
-                            />
-                          </label>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Supports CSV, Excel, JSON, Parquet, XML, TXT, PNG, JPEG, JPG, PDF files
-                          </p>
-                        </div>
-                        {/* Show selected files */}
-                        {uploadedFiles.length > 0 && (
-                          <div className="mt-4 text-left">
-                            <p className="text-xs font-semibold text-gray-700 mb-1">Selected file{uploadedFiles.length > 1 ? 's' : ''}:</p>
-                            <ul className="text-xs text-gray-600 space-y-1">
-                              {uploadedFiles.map((file, idx) => (
-                                <li key={file.name + idx} className="truncate">{file.name}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
                     </div>
                   </div>
                 )}
@@ -1262,7 +1226,7 @@ const handleBack = () => {
                   <div className="space-y-4">
                     <div className="bg-white p-4 rounded-md border border-gray-200">
                       {/* Azure Blob Storage: List files for selection */}
-                      {location === "cloud" && form.getValues("cloudProvider") === "azure" ? (
+                      {selectedSource?.configuration?.location === "cloud" && selectedSource?.configuration?.cloudProvider === "azure" ? (
                         <>
                           <div className="flex justify-end mt-4">
                             <button
@@ -1271,10 +1235,10 @@ const handleBack = () => {
                               disabled={listAzureBlobFiles.isLoading}
                               onClick={() => {
                                 handleListFilesButtonClick({
-                                  connectionString: form.getValues("connectionString"),
-                                  containerName: form.getValues("containerName"),
-                                  blobPath: form.getValues("pathPrefix"),
-                                  fileType: form.getValues("fileFormat")
+                                  connectionString: selectedSource?.configuration?.connectionString,
+                                  containerName: selectedSource?.configuration?.containerName,
+                                  blobPath: selectedSource?.configuration?.pathPrefix,
+                                  fileType: selectedSource?.configuration?.fileFormat
                                 });
                               }}
                             >
@@ -1491,19 +1455,13 @@ const handleBack = () => {
       };
   
       const handleListFilesButtonClick = async () => {
-          const connectionString = form.getValues("connectionString");
-          const containerName = form.getValues("containerName");
-          const blobPath = form.getValues("pathPrefix") || "";
-          const fileType = form.getValues("fileFormat");
+          const connectionString = selectedSource?.configuration?.connectionString;
+          const containerName = selectedSource?.configuration?.containerName;
+          const blobPath = selectedSource?.configuration?.pathPrefix;
+          const fileType = selectedSource?.configuration?.fileFormat;
           if (!connectionString || !containerName || !fileType) {
             return;
           }
-          console.log({
-            connectionString: form.getValues("connectionString"),
-            containerName: form.getValues("containerName"),
-            blobPath: form.getValues("pathPrefix"),
-            fileType: form.getValues("fileFormat"),
-          });
           listAzureBlobFiles.mutate(
             { connectionString, containerName, blobPath: blobPath || "", fileType },
             {
@@ -1534,6 +1492,42 @@ const handleBack = () => {
             }
           );
         }
+
+         useEffect(() => {
+    const currentSourceType = selectedSource?.configuration?.sourceType;
+    const currentLocation = selectedSource?.configuration?.location;
+    const connectionString = selectedSource?.configuration?.connectionString;
+    const containerName = selectedSource?.configuration?.containerName;
+    const blobPath = selectedSource?.configuration?.pathPrefix;
+    const fileType = selectedSource?.configuration?.fileFormat;
+    const cloudProvider = selectedSource?.configuration?.cloudProvider;
+    if (
+      currentStep === 3 &&
+      dataSelectionOptions.selectionMode === "specific" &&
+      currentSourceType === "files" &&
+      currentLocation === "cloud" &&
+      cloudProvider === "azure" &&
+      azureFiles.length > 0 &&
+      fileType &&
+      containerName &&
+      blobPath &&
+      cloudProvider&&
+      connectionString
+
+    ) {
+      handleListFilesButtonClick({
+        connectionString,
+        containerName,
+        blobPath,
+        fileType
+      });
+    }
+  }, [
+    currentStep,
+    dataSelectionOptions.selectionMode,
+    azureFiles.length,
+    selectedSource
+  ]);
 
   return (
     <div className="space-y-6">
@@ -1867,6 +1861,39 @@ const handleBack = () => {
                     )}
                   </div>
 
+                  {selectedTechniques.includes("Generate") && (
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                      <div className="border-b border-gray-300 pb-3 mb-4">
+                        <h3 className="text-lg font-semibold text-gray-800">
+                          Generate Data
+                        </h3>
+                      </div>
+                      <div className="flex items-center gap-6">
+                      <Label htmlFor="numRows" className="text-sm font-medium text-gray-700">
+                        Number of Rows:
+                      </Label>
+                      <Input
+                        id="numRows"
+                        type="number"
+                        value={numRows}
+                        onChange={e => setNumRows(e.target.value)}
+                        disabled={useAllRows}
+                        className="w-24"
+                      />
+                      <div className="flex items-center">
+                        <Checkbox
+                          id="useAllRows"
+                          checked={useAllRows}
+                          onCheckedChange={setUseAllRows}
+                        />
+                        <Label htmlFor="useAllRows" className="ml-2 text-sm">
+                          Use AI to generate rows
+                        </Label>
+                      </div>
+                    </div>
+                    </div>
+                  )}
+
                   {/* Destination Configuration Section */}
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                     <div className="border-b border-gray-300 pb-3 mb-4">
@@ -1986,7 +2013,7 @@ const handleBack = () => {
 
               {currentStep === 3 && 
                 <>
-                  {renderDataSelectionStep(selectedSource.configuration.sourceType)}
+                  {renderDataSelectionStep(selectedSource?.configuration?.sourceType)}
                 </>
               }
               
@@ -2831,6 +2858,9 @@ const handleBack = () => {
               </Button>
             </DialogContent>
           </Dialog>
+          {showSurroundAI && pipelineForWidget && (
+            <SurroundAIWidget pipeline={pipelineForWidget} onClose={() => setShowSurroundAI(false)} />
+          )}
         </>
       )}
     </div>
