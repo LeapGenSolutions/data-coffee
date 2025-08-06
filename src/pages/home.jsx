@@ -13,7 +13,7 @@ import {
   Bar,
 } from "recharts";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import {
@@ -35,7 +35,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState("Today");
   const [showExtras, setShowExtras] = useState(false);
   const [showSources, setShowSources] = useState(false);
-  
+
   const user = useSelector((state) => state.me.me);
 
   const chartData = [
@@ -127,31 +127,6 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Dashboard Header */}
-        <Card className="border border-[#e5e7eb] bg-white shadow-sm rounded-xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 group">
-                <TrendingUp className="h-6 w-6 text-[#2196F3]" />
-                <CardTitle className="text-xl font-semibold text-[#2196F3]">Dashboard Overview</CardTitle>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="border-[#2196F3] text-[#2196F3] hover:bg-[#E3F2FD]">
-                  Refresh
-                </Button>
-                <Badge variant="outline" className="border-[#4CAF50] text-[#4CAF50] rounded-md">
-                  Last 30 days
-                </Badge>
-                <Button variant="outline" size="sm" className="border-[#2196F3] text-[#2196F3] hover:bg-[#E3F2FD]">
-                  Export
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Data Sources */}
           <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
@@ -282,169 +257,169 @@ export default function Home() {
           </Card>
         </div>
 
-{/* Bottom Charts */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-  {/* Data Brewing Activity */}
-  <Card className="border-[#2196F3] shadow-sm h-full">
-    <div
-      className="bg-[#f7f1eb] px-6 py-4 flex items-center justify-between border-b border-[#2196F3] rounded-t-md cursor-pointer"
-      onClick={() => setShowExtras((prev) => !prev)}
-    >
-      <div>
-        <h2 className="text-xl font-semibold text-[#2196F3]">Data Brewing Activity</h2>
-        <p className="text-sm text-[#2196F3]">Tokenization and anonymization operations over time</p>
-      </div>
-      {showExtras ? (
-        <ChevronUp className="text-[#2196F3] w-6 h-6" />
-      ) : (
-        <ChevronDown className="text-[#2196F3] w-6 h-6" />
-      )}
-    </div>
+        {/* Bottom Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+          {/* Data Brewing Activity */}
+          <Card className="border-[#2196F3] shadow-sm h-full">
+            <div
+              className="bg-[#f7f1eb] px-6 py-4 flex items-center justify-between border-b border-[#2196F3] rounded-t-md cursor-pointer"
+              onClick={() => setShowExtras((prev) => !prev)}
+            >
+              <div>
+                <h2 className="text-xl font-semibold text-[#2196F3]">Data Brewing Activity</h2>
+                <p className="text-sm text-[#2196F3]">Tokenization and anonymization operations over time</p>
+              </div>
+              {showExtras ? (
+                <ChevronUp className="text-[#2196F3] w-6 h-6" />
+              ) : (
+                <ChevronDown className="text-[#2196F3] w-6 h-6" />
+              )}
+            </div>
 
-    <CardContent className="p-4">
-      <div className="h-[300px] w-full bg-white rounded-lg">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData}>
-            <CartesianGrid stroke="#ddd" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip />
-            {showExtras && (
-              <Legend
-                verticalAlign="top"
-                iconType="square"
-                formatter={(value) => (
-                  <span style={{ color: "#2196F3", fontSize: "0.875rem" }}>{value}</span>
-                )}
-              />
-            )}
-            <Line
-              type="monotone"
-              dataKey="blue"
-              stroke="#2196F3"
-              strokeWidth={3}
-              dot={{ r: 3 }}
-              name="API Requests"
-            />
-            <Line
-              type="monotone"
-              dataKey="green"
-              stroke="#4CAF50"
-              strokeWidth={3}
-              dot={{ r: 3 }}
-              name="Database Queries"
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
+            <CardContent className="p-4">
+              <div className="h-[300px] w-full bg-white rounded-lg">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <CartesianGrid stroke="#ddd" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    {showExtras && (
+                      <Legend
+                        verticalAlign="top"
+                        iconType="square"
+                        formatter={(value) => (
+                          <span style={{ color: "#2196F3", fontSize: "0.875rem" }}>{value}</span>
+                        )}
+                      />
+                    )}
+                    <Line
+                      type="monotone"
+                      dataKey="blue"
+                      stroke="#2196F3"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                      name="API Requests"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="green"
+                      stroke="#4CAF50"
+                      strokeWidth={3}
+                      dot={{ r: 3 }}
+                      name="Database Queries"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
 
-  {/* Data Sources */}
-  <Card className="border-[#2196F3] shadow-sm h-full">
-    <div
-      className="bg-[#f7f1eb] px-6 py-4 flex items-center justify-between border-b border-[#2196F3] rounded-t-md cursor-pointer"
-      onClick={() => setShowSources((prev) => !prev)}
-    >
-      <div>
-        <h2 className="text-xl font-semibold text-[#2196F3]">Data Sources</h2>
-        <p className="text-sm text-[#2196F3]">Source distribution by type</p>
-      </div>
-      {showSources ? (
-        <ChevronUp className="text-[#2196F3] w-6 h-6" />
-      ) : (
-        <ChevronDown className="text-[#2196F3] w-6 h-6" />
-      )}
-    </div>
+          {/* Data Sources */}
+          <Card className="border-[#2196F3] shadow-sm h-full">
+            <div
+              className="bg-[#f7f1eb] px-6 py-4 flex items-center justify-between border-b border-[#2196F3] rounded-t-md cursor-pointer"
+              onClick={() => setShowSources((prev) => !prev)}
+            >
+              <div>
+                <h2 className="text-xl font-semibold text-[#2196F3]">Data Sources</h2>
+                <p className="text-sm text-[#2196F3]">Source distribution by type</p>
+              </div>
+              {showSources ? (
+                <ChevronUp className="text-[#2196F3] w-6 h-6" />
+              ) : (
+                <ChevronDown className="text-[#2196F3] w-6 h-6" />
+              )}
+            </div>
 
-    <CardContent className="p-4">
-      <div className="h-[300px] w-full bg-white rounded-lg">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart
-            data={[
-              { source: "SQL", value: 11 },
-              { source: "REST API", value: 8 },
-              { source: "File System", value: 6 },
-              { source: "Cloud Storage", value: 4 },
-              { source: "GraphQL", value: 2 },
-            ]}
-            layout="vertical"
-            margin={{ top: 5, right: 10, left: 40, bottom: 5 }}
-          >
-            <CartesianGrid stroke="#eee" />
-            <XAxis type="number" hide={!showSources} />
-            <YAxis type="category" dataKey="source" tick={{ fontSize: 12 }} />
-            <Tooltip />
-            <Bar dataKey="value" fill="#2196F3" barSize={20} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
-</div>
+            <CardContent className="p-4">
+              <div className="h-[300px] w-full bg-white rounded-lg">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={[
+                      { source: "SQL", value: 11 },
+                      { source: "REST API", value: 8 },
+                      { source: "File System", value: 6 },
+                      { source: "Cloud Storage", value: 4 },
+                      { source: "GraphQL", value: 2 },
+                    ]}
+                    layout="vertical"
+                    margin={{ top: 5, right: 10, left: 40, bottom: 5 }}
+                  >
+                    <CartesianGrid stroke="#eee" />
+                    <XAxis type="number" hide={!showSources} />
+                    <YAxis type="category" dataKey="source" tick={{ fontSize: 12 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#2196F3" barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Activity Log Card */}
-<Card className="border-[#2196F3] shadow-sm">
-  <CardHeader className="bg-[#f7f1eb] flex flex-row justify-between items-center px-6 py-4 border-b border-[#2196F3]">
-    <div className="flex items-center gap-3">
-      <h2 className="text-xl font-semibold text-[#2196F3]">Data Brewing Activity Log</h2>
-      <Badge className="bg-[#2196F3] text-[#2196F3] text-xs">5 New</Badge>
-    </div>
-    <Button variant="ghost" className="text-[#2196F3] text-sm hover:underline">View All</Button>
-  </CardHeader>
-<CardContent className="p-4">
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    {[
-      {
-        text: "New source added",
-        time: "3 hours ago by Madhu Chanthati",
-        border: "border-l-[4px] border-green-700",
-        hover: "hover:bg-green-50",
-      },
-      {
-        text: "User account created",
-        time: "Yesterday by Admin",
-        border: "border-l-[4px] border-blue-700",
-        hover: "hover:bg-blue-50",
-      },
-      {
-        text: "System backup completed",
-        time: "2 days ago by System",
-        border: "border-l-[4px] border-yellow-700",
-        hover: "hover:bg-yellow-50",
-      },
-      {
-        text: "Report published",
-        time: "4 days ago by Sarah Johnson",
-        border: "border-l-[4px] border-red-700",
-        hover: "hover:bg-red-50",
-      },
-      {
-        text: "Failed login attempt",
-        time: "1 week ago from 192.168.1.105",
-        border: "border-l-[4px] border-rose-800",
-        hover: "hover:bg-rose-50",
-      },
-      {
-        text: "Data batch processed",
-        time: "1 week ago by System",
-        border: "border-l-[4px] border-purple-800",
-        hover: "hover:bg-purple-50",
-      },
-    ].map((log, index) => (
-      <div
-        key={index}
-        className={`bg-white p-4 shadow-sm ${log.border} ${log.hover} rounded-r-md transition-colors duration-200`}
-      >
-        <p className="font-semibold text-[#1e3a8a]">{log.text}</p>
-        <p className="text-sm text-gray-600 mt-1">{log.time}</p>
-      </div>
-    ))}
-  </div>
-</CardContent>
-</Card>
+        <Card className="border-[#2196F3] shadow-sm">
+          <CardHeader className="bg-[#f7f1eb] flex flex-row justify-between items-center px-6 py-4 border-b border-[#2196F3]">
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold text-[#2196F3]">Data Brewing Activity Log</h2>
+              <Badge className="bg-[#2196F3] text-[#2196F3] text-xs">5 New</Badge>
+            </div>
+            <Button variant="ghost" className="text-[#2196F3] text-sm hover:underline">View All</Button>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[
+                {
+                  text: "New source added",
+                  time: "3 hours ago by Madhu Chanthati",
+                  border: "border-l-[4px] border-green-700",
+                  hover: "hover:bg-green-50",
+                },
+                {
+                  text: "User account created",
+                  time: "Yesterday by Admin",
+                  border: "border-l-[4px] border-blue-700",
+                  hover: "hover:bg-blue-50",
+                },
+                {
+                  text: "System backup completed",
+                  time: "2 days ago by System",
+                  border: "border-l-[4px] border-yellow-700",
+                  hover: "hover:bg-yellow-50",
+                },
+                {
+                  text: "Report published",
+                  time: "4 days ago by Sarah Johnson",
+                  border: "border-l-[4px] border-red-700",
+                  hover: "hover:bg-red-50",
+                },
+                {
+                  text: "Failed login attempt",
+                  time: "1 week ago from 192.168.1.105",
+                  border: "border-l-[4px] border-rose-800",
+                  hover: "hover:bg-rose-50",
+                },
+                {
+                  text: "Data batch processed",
+                  time: "1 week ago by System",
+                  border: "border-l-[4px] border-purple-800",
+                  hover: "hover:bg-purple-50",
+                },
+              ].map((log, index) => (
+                <div
+                  key={index}
+                  className={`bg-white p-4 shadow-sm ${log.border} ${log.hover} rounded-r-md transition-colors duration-200`}
+                >
+                  <p className="font-semibold text-[#1e3a8a]">{log.text}</p>
+                  <p className="text-sm text-gray-600 mt-1">{log.time}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
- {/* Coffee Bean Tasks */}
+        {/* Coffee Bean Tasks */}
         <Card className="border-[#2196F3] shadow-sm">
           <CardHeader className="bg-blue-50 px-6 py-4 border-b border-[#2196F3]">
             <h2 className="text-xl font-semibold text-[#2196F3]">Scheduled Tasks</h2>
@@ -456,11 +431,10 @@ export default function Home() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 text-sm py-2 font-medium transition-all ${
-                    activeTab === tab
+                  className={`flex-1 text-sm py-2 font-medium transition-all ${activeTab === tab
                       ? "bg-[#2196F3] text-white"
                       : "text-[#2196F3] hover:bg-blue-50"
-                  }`}
+                    }`}
                 >
                   {tab}
                 </button>

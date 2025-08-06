@@ -67,6 +67,8 @@ import usePatchPipeline from '../hooks/usePatchPipeline';
 
 import { BACKEND_URL } from '../constants';
 import { PipelineDetailsModal } from './pipeline-details-modal';
+import { on } from 'process';
+import { set } from 'date-fns';
 
 
 function UserManagement() {
@@ -146,7 +148,6 @@ function UserManagement() {
 
 
   const fetchCustomPrompt = useFetchCustomPrompt();
-
 
   // Set the first workspace when workspaces are loaded
   useEffect(() => {
@@ -2631,15 +2632,7 @@ const handleBack = () => {
                             <Button
                               size="sm"
                               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
-                              onClick={() => {
-                                const newId = promptPipeline?.id;
-                                window.open(
-                                  `https://octopus-nonred-strlit-czh5frcegse9cwdb.centralus-01.azurewebsites.net/?pipeline_type=redaction&pipeline_id=${encodeURIComponent(
-                                    newId
-                                  )}`,
-                                  "_blank"
-                                );
-                              }}
+                              onClick={() => handleOpenSurroundAI(promptPipeline)}
                             >
                               Open Surround AI
                             </Button>

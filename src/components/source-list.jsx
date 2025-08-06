@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import { useSelector } from 'react-redux';
 import {
   Search,
   Plus,
@@ -43,7 +42,7 @@ import { SourceDetailsModal } from "./source-details-modal";
 
 export default function SourceList({
   sources=[], onAddSource, onEditSource,
-  onDeleteSource, selectedWorkspace, setSelectedWorkspace, onRefresh
+  onDeleteSource, selectedWorkspace, setSelectedWorkspace, onRefresh, onAddWorkspace, workspaces=[]
 }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState("sourceName");
@@ -156,9 +155,6 @@ export default function SourceList({
     );
   };
 
-  // Workspace dropdown state (Redux)
-  const workspaces = useSelector((state) => state.workspaces.workspaces) || [];
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -177,7 +173,7 @@ export default function SourceList({
               value={selectedWorkspace?.id || ""}
               onChange={e => {
                 const ws = workspaces.find(w => w.id === e.target.value);
-                setSelectedWorkspace(ws || "");
+                setSelectedWorkspace(ws || null);
               }}
               disabled={workspaces.length === 0}
             >
@@ -208,6 +204,13 @@ export default function SourceList({
             <Plus className="h-4 w-4" />
             Add Source
           </Button>
+          <Button
+            onClick={onAddWorkspace}
+            className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
+          >
+            <Plus className="h-4 w-4" />
+            Add Workspace
+           </Button>
         </div>
       </div>
 
