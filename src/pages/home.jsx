@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -25,18 +24,32 @@ import {
 } from "lucide-react";
 import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
+import useFetchSources from "../hooks/useFetchSources";
 
 export default function Home() {
-  const { data: dashboardStats, isLoading: statsLoading } = useQuery({
-    queryKey: ["/api/dashboard/stats"],
-    enabled: true,
-  });
 
   const [activeTab, setActiveTab] = useState("Today");
   const [showExtras, setShowExtras] = useState(false);
   const [showSources, setShowSources] = useState(false);
 
   const user = useSelector((state) => state.me.me);
+
+  const workspaceID = useSelector(
+    (state) => state.workspaces?.workspaces?.[0]?.id
+  );
+  const { sources = [], isLoading: sourcesLoading } = useFetchSources(workspaceID);
+
+  const dynamicSourceData = useMemo(() => {
+    const typeCounts = sources.reduce((acc, source) => {
+      const type = source?.configuration?.sourceType ?? "Unknown";
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(typeCounts).map(([type, count]) => ({
+      source: type,
+      value: count,
+    }));
+  }, [sources]);
 
   const chartData = [
     { month: "Jan", blue: 4700, green: 2900 },
@@ -88,25 +101,6 @@ export default function Home() {
     }
   };
 
-  if (statsLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-blue-600">Loading dashboard...</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  const stats = dashboardStats || {
-    totalSources: 12,
-    totalReports: 16,
-    activeSources: 28,
-    recentActivity: [],
-  };
   const greeting = user ? `Welcome, ${user.name}!` : "Welcome!";
 
   return (
@@ -182,7 +176,6 @@ export default function Home() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Generated Reports</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalReports}</p>
                   <p className="text-xs text-gray-500 mt-1">↑ 3 from last period</p>
                 </div>
                 <div className="p-3 bg-[#F44336] rounded-lg">
@@ -334,25 +327,39 @@ export default function Home() {
 
             <CardContent className="p-4">
               <div className="h-[300px] w-full bg-white rounded-lg">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={[
-                      { source: "SQL", value: 11 },
-                      { source: "REST API", value: 8 },
-                      { source: "File System", value: 6 },
-                      { source: "Cloud Storage", value: 4 },
-                      { source: "GraphQL", value: 2 },
-                    ]}
-                    layout="vertical"
-                    margin={{ top: 5, right: 10, left: 40, bottom: 5 }}
-                  >
-                    <CartesianGrid stroke="#eee" />
-                    <XAxis type="number" hide={!showSources} />
-                    <YAxis type="category" dataKey="source" tick={{ fontSize: 12 }} />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#2196F3" barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {(() => {
+                  if (sourcesLoading) {
+                    return (
+                      <div className="flex items-center justify-center h-full text-[#2196F3] text-sm">
+                        Loading sources...
+                      </div>
+                    );
+                  }
+
+                  if (dynamicSourceData.length === 0) {
+                    return (
+                      <div className="flex items-center justify-center h-full text-sm text-gray-500">
+                        No data sources found in your workspace yet.
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={dynamicSourceData}
+                        layout="vertical"
+                        margin={{ top: 5, right: 10, left: 40, bottom: 5 }}
+                      >
+                        <CartesianGrid stroke="#eee" />
+                        <XAxis type="number" hide={!showSources} />
+                        <YAxis type="category" dataKey="source" tick={{ fontSize: 12 }} />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#2196F3" barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -432,8 +439,8 @@ export default function Home() {
                   key={tab}
                   onClick={() => setActiveTab(tab)}
                   className={`flex-1 text-sm py-2 font-medium transition-all ${activeTab === tab
-                      ? "bg-[#2196F3] text-white"
-                      : "text-[#2196F3] hover:bg-blue-50"
+                    ? "bg-[#2196F3] text-white"
+                    : "text-[#2196F3] hover:bg-blue-50"
                     }`}
                 >
                   {tab}
