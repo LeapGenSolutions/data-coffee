@@ -426,14 +426,14 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Coffee Bean Tasks */}
+        {/* Coffee Bean Tasks
         <Card className="border-[#2196F3] shadow-sm">
           <CardHeader className="bg-blue-50 px-6 py-4 border-b border-[#2196F3]">
             <h2 className="text-xl font-semibold text-[#2196F3]">Scheduled Tasks</h2>
           </CardHeader>
           <CardContent className="p-0">
             {/* Tab Switcher */}
-            <div className="flex bg-blue-100 rounded-t-md overflow-hidden">
+            {/* <div className="flex bg-blue-100 rounded-t-md overflow-hidden">
               {["Today", "This Week", "This Month"].map((tab) => (
                 <button
                   key={tab}
@@ -446,9 +446,9 @@ export default function Home() {
                   {tab}
                 </button>
               ))}
-            </div>
+            </div> */}
 
-            {/* Task List */}
+            {/* Task List
             <ul className="divide-y divide-blue-100 px-6 py-4">
               {scheduledTasks[activeTab].map((task, idx) => (
                 <li key={idx} className="flex justify-between items-center py-3">
@@ -461,7 +461,7 @@ export default function Home() {
               ))}
             </ul>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Footer */}
         <div className="text-center text-sm text-[#2196F3] pt-6 border-t border-[#e6d5c5]">
