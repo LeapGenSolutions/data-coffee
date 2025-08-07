@@ -28,7 +28,6 @@ import useFetchSources from "../hooks/useFetchSources";
 
 export default function Home() {
 
-  const [activeTab, setActiveTab] = useState("Today");
   const [showExtras, setShowExtras] = useState(false);
   const [showSources, setShowSources] = useState(false);
 
@@ -65,41 +64,6 @@ export default function Home() {
     { month: "Nov", blue: 9600, green: 7000 },
     { month: "Dec", blue: 10000, green: 7500 },
   ];
-
-  const scheduledTasks = {
-    Today: [
-      { title: "System update", time: "Scheduled for 3:00 PM", status: "Pending" },
-      { title: "Maintenance check", time: "Scheduled for 5:00 PM", status: "In Progress" },
-      { title: "Data backup", time: "Scheduled for 11:00 PM", status: "Queued" },
-    ],
-    "This Week": [
-      { title: "Security audit", time: "Wednesday at 2:00 PM", status: "Pending" },
-      { title: "Report generation", time: "Friday at 9:00 AM", status: "Scheduled" },
-    ],
-    "This Month": [
-      { title: "License renewal", time: "August 24", status: "Important" },
-      { title: "Quarterly review", time: "August 31", status: "Scheduled" },
-    ],
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-50 text-yellow-700";
-      case "In Progress":
-        return "bg-green-50 text-green-700";
-      case "Queued":
-        return "bg-blue-50 text-blue-700";
-      case "Scheduled":
-        return "bg-blue-50 text-blue-700";
-      case "Planned":
-        return "bg-purple-50 text-purple-700";
-      case "Important":
-        return "bg-red-50 text-red-700";
-      default:
-        return "bg-gray-50 text-gray-700";
-    }
-  };
 
   const greeting = user ? `Welcome, ${user.name}!` : "Welcome!";
 
@@ -426,44 +390,7 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Coffee Bean Tasks */}
-        <Card className="border-[#2196F3] shadow-sm">
-          <CardHeader className="bg-blue-50 px-6 py-4 border-b border-[#2196F3]">
-            <h2 className="text-xl font-semibold text-[#2196F3]">Scheduled Tasks</h2>
-          </CardHeader>
-          <CardContent className="p-0">
-            {/* Tab Switcher */}
-            <div className="flex bg-blue-100 rounded-t-md overflow-hidden">
-              {["Today", "This Week", "This Month"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`flex-1 text-sm py-2 font-medium transition-all ${activeTab === tab
-                    ? "bg-[#2196F3] text-white"
-                    : "text-[#2196F3] hover:bg-blue-50"
-                    }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Task List */}
-            <ul className="divide-y divide-blue-100 px-6 py-4">
-              {scheduledTasks[activeTab].map((task, idx) => (
-                <li key={idx} className="flex justify-between items-center py-3">
-                  <div>
-                    <p className="text-[#2196F3] font-medium">{task.title}</p>
-                    <p className="text-sm text-gray-500">{task.time}</p>
-                  </div>
-                  <span className={`text-xs px-3 py-1 rounded-full ${getStatusColor(task.status)}`}>{task.status}</span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
+        
         <div className="text-center text-sm text-[#2196F3] pt-6 border-t border-[#e6d5c5]">
           © 2025 Data Coffee. All rights reserved. | Privacy Policy | Terms of Service
         </div>
