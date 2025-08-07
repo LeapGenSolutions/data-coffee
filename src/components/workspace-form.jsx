@@ -1,7 +1,14 @@
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "./ui/card";
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -21,14 +28,15 @@ import {
 } from "./ui/select";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
-import { useSaveWorkspace } from "../hooks/useSaveWorkspace"; 
+import { useSaveWorkspace } from "../hooks/useSaveWorkspace";
+import UserMultiSelect from "./UserMultiSelect"; //  New import
 
 const schema = z.object({
   workspaceName: z.string().min(1, "Workspace name is required"),
   visibility: z.enum(["private", "public"]),
 });
 
-export default function WorkspaceForm({onWorkspaceCreated}) {
+export default function WorkspaceForm({ onWorkspaceCreated }) {
   const user = useSelector((state) => state.me.me);
   const form = useForm({
     resolver: zodResolver(schema),
@@ -38,14 +46,17 @@ export default function WorkspaceForm({onWorkspaceCreated}) {
     },
   });
 
-  const saveWorkspace = useSaveWorkspace(); 
+  const visibility = useWatch({ control: form.control, name: "visibility" });
+  const saveWorkspace = useSaveWorkspace();
+
+  const [subscribers, setSubscribers] = useState([]);
 
   const onSubmit = (data) => {
     const newWorkspace = {
       workspaceName: data.workspaceName,
       visibility: data.visibility,
       owner: user?.email,
-      subscribers: [],
+      subscribers: data.visibility === "public" ? subscribers : [],
     };
 
     saveWorkspace.mutate(
@@ -58,9 +69,6 @@ export default function WorkspaceForm({onWorkspaceCreated}) {
         onError: (err) => console.error("Save failed", err),
       }
     );
-
-    
-
   };
 
   return (
@@ -71,6 +79,7 @@ export default function WorkspaceForm({onWorkspaceCreated}) {
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {/* Workspace Name */}
             <FormField
               control={form.control}
               name="workspaceName"
@@ -84,6 +93,8 @@ export default function WorkspaceForm({onWorkspaceCreated}) {
                 </FormItem>
               )}
             />
+
+            {/* Visibility */}
             <FormField
               control={form.control}
               name="visibility"
@@ -105,6 +116,16 @@ export default function WorkspaceForm({onWorkspaceCreated}) {
                 </FormItem>
               )}
             />
+
+            {/* Multi-Select Dropdown */}
+            {visibility === "public" && (
+              <div>
+                <FormLabel>Add Subscribers (Select Users)</FormLabel>
+                <UserMultiSelect selected={subscribers} onChange={setSubscribers} />
+              </div>
+            )}
+
+            {/* Submit */}
             <CardFooter className="pt-4">
               <Button
                 type="submit"
