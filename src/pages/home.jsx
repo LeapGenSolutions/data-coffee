@@ -19,25 +19,36 @@ import {
   Database,
   Users,
   Activity,
-  FileText,
   TrendingUp,
 } from "lucide-react";
 import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
+import { useUserWorkspaces } from "../hooks/useUserWorkspaces";
 
 export default function Home() {
-
   const [activeTab, setActiveTab] = useState("Today");
   const [showExtras, setShowExtras] = useState(false);
   const [showSources, setShowSources] = useState(false);
 
   const user = useSelector((state) => state.me.me);
+  const workspaceID = useSelector((state) => state.workspace?.currentWorkspaceId);
+  const { data: workspacesList, isLoading: workspaceLoading } = useUserWorkspaces(user?.email);
 
-  const workspaceID = useSelector(
-    (state) => state.workspaces?.workspaces?.[0]?.id
-  );
-  const { sources = [], isLoading: sourcesLoading } = useFetchSources(workspaceID);
+  const sourcesData = useFetchSources(workspaceID);
+  const sources = useMemo(() => sourcesData?.sources ?? [], [sourcesData?.sources]);
+  const sourcesLoading = sourcesData?.isLoading ?? false;
+
+
+  const dashboardStats = null; // no API hook used yet
+
+  const stats = dashboardStats || {
+    dataSources: 33,
+    totalPipelines: 31,
+    successPipelines: 0,
+    workspaces: 6,
+  };
+
 
   const dynamicSourceData = useMemo(() => {
     const typeCounts = sources.reduce((acc, source) => {
@@ -121,135 +132,71 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Data Sources */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[#2196F3] font-medium text-gray-600">Data Sources</p>
-                  <p className="text-3xl font-bold text-gray-900">12</p>
-                  <p className="text-xs text-gray-500 mt-1">↑ 2 from last period</p>
-                </div>
-                <div className="p-3 bg-[#FF9800] rounded-lg">
-                  <Database className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Active Users */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
-                  <p className="text-3xl font-bold text-gray-900">28</p>
-                  <p className="text-xs text-gray-500 mt-1">↑ 5 from last period</p>
-                </div>
-                <div className="p-3 bg-[#9C27B0] rounded-lg">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Data Health */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Data Health</p>
-                  <p className="text-3xl font-bold text-gray-900">98%</p>
-                  <p className="text-xs text-[#4CAF50] mt-1">Excellent</p>
-                </div>
-                <div className="p-3 bg-[#4CAF50] rounded-lg">
-                  <TrendingUp className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Generated Reports */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Generated Reports</p>
-                  <p className="text-xs text-gray-500 mt-1">↑ 3 from last period</p>
-                </div>
-                <div className="p-3 bg-[#F44336] rounded-lg">
-                  <FileText className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  {/* Data Sources */}
+  <Card className="border-gray-200 shadow-sm hover:shadow-lg group hover:scale-105 transition-transform">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">Data Sources</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {sourcesLoading ? "..." : sources?.length || 33}
+          </p>
         </div>
-
-        {/* Secondary Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Data Processed */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Data Processed</p>
-                  <p className="text-3xl font-bold text-[#2196F3]">14.7GB</p>
-                  <p className="text-xs text-[#2196F3] mt-1">↑ 2.5GB from last period</p>
-                </div>
-                <div className="p-3 bg-[#2196F3] rounded-full">
-                  <Database className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          {/* Processing Speed */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Processing Speed</p>
-                  <p className="text-3xl font-bold text-[#4CAF50]">245ms</p>
-                  <p className="text-xs text-green-600 mt-1">↓ 15ms from last period</p>
-                </div>
-                <div className="p-3 bg-[#4CAF50] rounded-full">
-                  <Activity className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          {/* Bytes Served */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Bytes Served</p>
-                  <p className="text-3xl font-bold text-[#FF9800]">1.2TB</p>
-                  <p className="text-xs text-[#FF9800] mt-1">↑ 12% from last period</p>
-                </div>
-                <div className="p-3 bg-[#FF9800] rounded-full">
-                  <Database className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          {/* Freshness */}
-          <Card className="border-gray-200 shadow-sm transition-transform duration-300 ease-in-out transform hover:scale-105 hover:shadow-lg group">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Freshness</p>
-                  <p className="text-3xl font-bold text-[#9C27B0]">99.2%</p>
-                  <p className="text-xs text-[#9C27B0] mt-1">↑ 0.5% from last period</p>
-                </div>
-                <div className="p-3 bg-[#9C27B0] rounded-full">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="p-3 bg-[#FF9800] rounded-lg">
+          <Database className="h-6 w-6 text-white" />
         </div>
+      </div>
+    </CardContent>
+  </Card>
 
+  {/* Total Pipelines */}
+  <Card className="border-gray-200 shadow-sm hover:shadow-lg group hover:scale-105 transition-transform">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">Total Pipelines</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.totalPipelines}</p>
+        </div>
+        <div className="p-3 bg-[#4CAF50] rounded-lg">
+          <Activity className="h-6 w-6 text-white" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Success Pipelines */}
+  <Card className="border-gray-200 shadow-sm hover:shadow-lg group hover:scale-105 transition-transform">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">Success Pipelines</p>
+          <p className="text-3xl font-bold text-gray-900">{stats.successPipelines || 1}</p>
+        </div>
+        <div className="p-3 bg-[#2196F3] rounded-lg">
+          <TrendingUp className="h-6 w-6 text-white" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Workspaces Access */}
+  <Card className="border-gray-200 shadow-sm hover:shadow-lg group hover:scale-105 transition-transform">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-gray-600">Workspaces Access</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {workspaceLoading ? "..." : workspacesList?.length || 0}
+          </p>
+        </div>
+        <div className="p-3 bg-[#9C27B0] rounded-lg">
+          <Users className="h-6 w-6 text-white" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+</div>
         {/* Bottom Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
           {/* Data Brewing Activity */}
