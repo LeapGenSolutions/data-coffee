@@ -19,7 +19,7 @@ const SurroundAIWidget = (props) => {
           bg-white rounded-2xl shadow-2xl border-2 border-blue-200
           flex flex-col transition-all duration-300 ease-in-out
           overflow-hidden
-          ${isMinimized ? "h-12 w-60" : "h-[60vh] w-80"}
+          ${isMinimized ? "h-12 w-60" : "h-[85vh] w-100"}
         `}
       >
         {/* Header */}
