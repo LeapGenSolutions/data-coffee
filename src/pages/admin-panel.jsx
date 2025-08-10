@@ -58,7 +58,8 @@ export default function AdminPanel() {
     setLocation("/admin");
   };
 
-  const handleDeleteSource = async (id, userId) => {
+  const handleDeleteSource = async (id) => {
+    const userId = currentUserEmail;
     try {
       await deleteSourceMutation.mutateAsync({ id, userId });
       console.log("Source deleted. Refetching...");
