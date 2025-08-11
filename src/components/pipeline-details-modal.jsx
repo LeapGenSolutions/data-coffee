@@ -7,10 +7,10 @@ import {
 } from "./ui/dialog";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { 
-  Database, 
-  Calendar, 
-  Clock, 
+import {
+  Database,
+  Calendar,
+  Clock,
   Settings,
   Shield,
   GitBranch,
@@ -18,9 +18,12 @@ import {
   Zap,
   CheckCircle,
   AlertCircle} from "lucide-react";
+import { useMemo } from "react";
+import useFetchPipelineHistory from "../hooks/useFetchPipelineHistory";
 
 export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
-  if (!pipeline) return null;
+  // Call hooks unconditionally (no early return above this)
+  const { source: history = [] } = useFetchPipelineHistory();
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -31,7 +34,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
     };
 
     const config = statusConfig[status?.toLowerCase()] || statusConfig.active;
-    
+
     return (
       <Badge className={`${config.className} flex items-center gap-1`}>
         {config.icon}
@@ -49,7 +52,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
     };
 
     const config = techniqueConfig[technique?.toLowerCase()] || techniqueConfig.masking;
-    
+
     return (
       <Badge className={`${config.className} flex items-center gap-1`}>
         {config.icon}
@@ -57,6 +60,68 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
       </Badge>
     );
   };
+
+  const normalizeStatus = (s) => {
+    const x = (s || "").toLowerCase();
+    if (x === "success") return "active";
+    if (x === "failed" || x === "error") return "inactive";
+    if (x === "running") return "running";
+    return x || "active";
+  };
+
+  const normalizeCosmosDate = (d) => {
+    if (!d) return undefined;
+    if (typeof d === "string" && d.includes(" ") && !d.includes("T")) {
+      return d.replace(" ", "T");
+    }
+    return d;
+  };
+
+  const view = useMemo(() => {
+    if (!pipeline) return null;
+
+    const rows = history
+      .filter((h) => h.pipeline_id === pipeline.id || h.pipeline_name === pipeline.name)
+      .sort((a, b) => new Date(b.pipeline_start_time) - new Date(a.pipeline_start_time));
+
+    const latest = rows[0];
+    const totalRuns = rows.length || undefined;
+    const successRate = rows.length
+      ? Math.round(
+          (rows.filter((r) => (r.pipeline_status || "").toLowerCase() === "success").length / rows.length) *
+            100
+        )
+      : undefined;
+
+    return {
+      // config
+      name: pipeline.name,
+      source: pipeline.source,
+      destination: pipeline.destination,
+      technique: pipeline.technique,
+      processingAgent: pipeline.processing_agent || pipeline.processingAgent,
+      schedule: pipeline.schedule,
+      description: pipeline.description,
+      workspaceName: pipeline.workspaceName,
+
+      // cosmos-preferred
+      status: normalizeStatus(latest?.pipeline_status || pipeline.status),
+      created: pipeline.created_at || pipeline.last_updated,
+      lastRun: normalizeCosmosDate(latest?.pipeline_end_time) || latest?.pipeline_start_time,
+
+      // stats
+      totalRuns,
+      successRate,
+      avgDuration: latest?.pipeline_duration || undefined,
+
+      // extras
+      logs: latest?.pipeline_logs,
+      message: latest?.pipeline_message,
+    };
+  }, [pipeline, history]);
+
+  // ✅ Early return AFTER hooks
+  if (!view) return null;
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -83,7 +148,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
               <div>
                 <DialogTitle className="flex items-center gap-2 text-xl text-gray-900">
                   <GitBranch className="h-5 w-5 text-[#2196F3]" />
-                  {pipeline.name}
+                  {view.name}
                 </DialogTitle>
                 <DialogDescription className="text-gray-600 mt-1">
                   View configuration and details for this pipeline.
@@ -104,7 +169,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
                     <Database className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Source</span>
                   </div>
-                  <span className="text-sm text-gray-900">{pipeline.source}</span>
+                  <span className="text-sm text-gray-900">{view.source}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -112,7 +177,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
                     <Target className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Destination</span>
                   </div>
-                  <span className="text-sm text-gray-900">{pipeline.destination}</span>
+                  <span className="text-sm text-gray-900">{view.destination}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -120,7 +185,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
                     <Shield className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Technique</span>
                   </div>
-                  {getTechniqueBadge(pipeline.technique)}
+                  {getTechniqueBadge(view.technique)}
                 </div>
               </div>
 
@@ -130,7 +195,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
                     <Settings className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Status</span>
                   </div>
-                  {getStatusBadge(pipeline.status)}
+                  {getStatusBadge(view.status)}
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -138,7 +203,7 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
                     <Calendar className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Created</span>
                   </div>
-                  <span className="text-sm text-gray-900">{formatDate(pipeline.created)}</span>
+                  <span className="text-sm text-gray-900">{formatDate(view.created)}</span>
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -146,41 +211,41 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
                     <Clock className="h-4 w-4 text-gray-500" />
                     <span className="text-sm font-medium text-gray-700">Last Run</span>
                   </div>
-                  <span className="text-sm text-gray-900">{formatDate(pipeline.lastRun)}</span>
+                  <span className="text-sm text-gray-900">{formatDate(view.lastRun)}</span>
                 </div>
               </div>
             </div>
 
             {/* Additional Configuration */}
-            {(pipeline.processingAgent || pipeline.schedule || pipeline.description) && (
+            {(view.processingAgent || view.schedule || view.description) && (
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
                   Additional Configuration
                 </h4>
 
-                {pipeline.description && (
+                {view.description && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Description</label>
                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-gray-700">{pipeline.description}</p>
+                      <p className="text-sm text-gray-700">{view.description}</p>
                     </div>
                   </div>
                 )}
 
-                {pipeline.processingAgent && (
+                {view.processingAgent && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Processing Agent</label>
                     <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-sm text-gray-700">{pipeline.processingAgent}</p>
+                      <p className="text-sm text-gray-700">{view.processingAgent}</p>
                     </div>
                   </div>
                 )}
 
-                {pipeline.schedule && (
+                {view.schedule && (
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-700">Schedule</label>
                     <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-gray-700">{pipeline.schedule}</p>
+                      <p className="text-sm text-gray-700">{view.schedule}</p>
                     </div>
                   </div>
                 )}
@@ -188,28 +253,28 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
             )}
 
             {/* Pipeline Statistics */}
-            {(pipeline.totalRuns || pipeline.successRate || pipeline.avgDuration) && (
+            {(view.totalRuns || view.successRate || view.avgDuration) && (
               <div className="space-y-4">
                 <h4 className="text-sm font-semibold text-gray-900 border-b border-gray-200 pb-2">
                   Pipeline Statistics
                 </h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {pipeline.totalRuns && (
+                  {view.totalRuns && (
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="text-sm font-medium text-gray-700">Total Runs</div>
-                      <div className="text-lg font-semibold text-gray-900">{pipeline.totalRuns}</div>
+                      <div className="text-lg font-semibold text-gray-900">{view.totalRuns}</div>
                     </div>
                   )}
-                  {pipeline.successRate && (
+                  {view.successRate && (
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="text-sm font-medium text-gray-700">Success Rate</div>
-                      <div className="text-lg font-semibold text-gray-900">{pipeline.successRate}%</div>
+                      <div className="text-lg font-semibold text-gray-900">{view.successRate}%</div>
                     </div>
                   )}
-                  {pipeline.avgDuration && (
+                  {view.avgDuration && (
                     <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="text-sm font-medium text-gray-700">Avg Duration</div>
-                      <div className="text-lg font-semibold text-gray-900">{pipeline.avgDuration}</div>
+                      <div className="text-lg font-semibold text-gray-900">{view.avgDuration}</div>
                     </div>
                   )}
                 </div>
@@ -217,11 +282,11 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
             )}
 
             {/* Workspace Information */}
-            {pipeline.workspaceName && (
+            {view.workspaceName && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700">Workspace</label>
                 <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <p className="text-sm text-gray-700">{pipeline.workspaceName}</p>
+                  <p className="text-sm text-gray-700">{view.workspaceName}</p>
                 </div>
               </div>
             )}
@@ -239,4 +304,4 @@ export function PipelineDetailsModal({ pipeline, isOpen, onClose }) {
       </DialogContent>
     </Dialog>
   );
-} 
+}
