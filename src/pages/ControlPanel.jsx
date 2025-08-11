@@ -37,6 +37,8 @@ import DashboardLayout from "../layouts/dashboard-layout";
 import { Power } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 import useFetchPipelineHistory from "../hooks/useFetchPipelineHistory";
+import { PipelineDetailsModal } from "../components/pipeline-details-modal";
+import useFetchPipelineById from "../hooks/useFetchPipelineById";
 
 export default function ControlPanel() {
   // General settings state
@@ -52,6 +54,9 @@ export default function ControlPanel() {
   const [memoryUsage, setMemoryUsage] = useState(68);
   const [diskUsage, setDiskUsage] = useState(34);
   const { source: pipelineHistory, isLoading, error, refetch } = useFetchPipelineHistory();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedRun, setSelectedRun] = useState(null);
+  const { data: pipelineConfig } = useFetchPipelineById(selectedRun?.pipeline_id);
 
 
 
@@ -237,7 +242,15 @@ export default function ControlPanel() {
                               {getStatusBadge(item.pipeline_status)}
                             </td>
                             <td className="p-3 flex gap-2">
-                              <Button size="icon" variant="outline" className="rounded-full">
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="rounded-full"
+                                onClick={() => {
+                                  setSelectedRun(item);          // item is the row (a run)
+                                  setDetailsOpen(true);
+                                }}
+                              >
                                 <Eye className="h-4 w-4 text-[#2196F3]" />
                               </Button>
                               <Button size="icon" variant="outline" className="rounded-full">
@@ -516,6 +529,13 @@ export default function ControlPanel() {
           </TabsContent>
         </Tabs>
       </div>
+      <PipelineDetailsModal
+        pipeline={pipelineConfig}   // optional; modal works even if this is undefined
+        run={selectedRun}           //  tell the modal which run to show
+        mode="run"                  //  force run mode 
+        isOpen={detailsOpen}
+        onClose={() => setDetailsOpen(false)}
+      />
     </DashboardLayout>
   )
 }
