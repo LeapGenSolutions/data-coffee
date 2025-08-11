@@ -11,6 +11,7 @@ import {
   Sparkles,
   Loader2,
   RefreshCcw,
+  Trash2 as Trash,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -56,17 +57,13 @@ import useFetchPipeline from "../hooks/useFetchPipeline";
 import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
 import { useClonePipeline } from "../hooks/useSavePipeline";
 // Custom prompt fetch hook
-
 // Handler for Use Prompt button
 import { useSelector } from "react-redux";
 import usePatchPipeline from '../hooks/usePatchPipeline';
 import { format } from 'date-fns';
-
 import { BACKEND_URL } from '../constants';
 import { PipelineDetailsModal } from './pipeline-details-modal';
-import { on } from 'process';
-import { set } from 'date-fns';
-
+import useDeletePipeline from "../hooks/useDeletePipeline";
 
 function UserManagement() {
   const [sourceError, setSourceError] = useState(false);
@@ -114,6 +111,7 @@ function UserManagement() {
   const [pipelineForWidget, setPipelineForWidget] = useState(null);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
+  const { mutate: deletePipeline, isLoading: deletingPipeline } = useDeletePipeline();
   const [selectedWorkspace, setSelectedWorkspace] = useState(() => {
     // Only set the first workspace if workspaces array exists and has items
     return workspaces && workspaces.length > 0 ? workspaces[0] || "" : "";
@@ -628,6 +626,28 @@ function UserManagement() {
       });
     }
   };
+
+  const handleDeletePipeline = (pipeline) => {
+  const userId = pipeline?.user_id; // PK: /user_id (must match the doc)
+  if (!userId) {
+    toast({ title: "Delete failed", description: "user_id missing on pipeline.", variant: "destructive" });
+    return;
+  }
+  if (!window.confirm(`Delete pipeline "${pipeline.name}"? This cannot be undone.`)) return;
+
+  deletePipeline(
+    { id: pipeline.id, email: userId }, // route param name is :email, value = user_id
+    {
+      onSuccess: () => {
+        toast({ title: "Pipeline deleted", description: `${pipeline.name} was removed.` });
+        refetchPipelines();
+      },
+      onError: (e) => {
+        toast({ title: "Delete failed", description: e?.message || "Unknown error", variant: "destructive" });
+      }
+    }
+  );
+};
 
   // Add mock prompt history and suggested prompt for demonstration
   const getPipelinePrompts = (pipeline) => {
@@ -1340,41 +1360,49 @@ function UserManagement() {
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            className="h-8 w-8 p-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => handleEditPipeline(pipeline)}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                          >
-                            <Pencil className="h-4 w-4 text-blue-500" /> Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => setViewPipeline(pipeline)}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                          >
-                            <Eye className="h-4 w-4 text-blue-500" /> View
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleClonePipeline(pipeline)}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                          >
-                            <Copy className="h-4 w-4 text-blue-500" /> Clone
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => handleRunPipeline(pipeline)}
-                            className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                          >
-                            <RefreshCcw className="h-4 w-4 text-blue-500" /> Run Manually
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => handleEditPipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <Pencil className="h-4 w-4 text-blue-500" /> Edit
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => setViewPipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <Eye className="h-4 w-4 text-blue-500" /> View
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => handleClonePipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <Copy className="h-4 w-4 text-blue-500" /> Clone
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => handleRunPipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                        >
+                          <RefreshCcw className="h-4 w-4 text-blue-500" /> Run Manually
+                        </DropdownMenuItem>
+
+                        <DropdownMenuItem
+                          onClick={() => handleDeletePipeline(pipeline)}
+                          className="flex items-center gap-2 cursor-pointer hover:bg-red-50 focus:bg-red-100 text-gray-700"
+                        >
+                          <Trash className="h-4 w-4 text-red-500" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     </TableCell>
                     <TableCell className="whitespace-normal p-4 min-w-[100px] max-w-[140px] text-sm flex justify-center items-center">
                       <Button
