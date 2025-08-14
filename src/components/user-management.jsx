@@ -11,6 +11,7 @@ import {
   Sparkles,
   Loader2,
   RefreshCcw,
+  AlertTriangle,
   Trash2 as Trash,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -65,6 +66,7 @@ import { format } from 'date-fns';
 import { PipelineDetailsModal } from './pipeline-details-modal';
 import useDeletePipeline from "../hooks/useDeletePipeline";
 
+
 function UserManagement() {
   const [sourceError, setSourceError] = useState(false);
   const [techniquesError, setTechniquesError] = useState(false);
@@ -111,7 +113,11 @@ function UserManagement() {
   const [pipelineForWidget, setPipelineForWidget] = useState(null);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
-  const { mutate: deletePipeline, isLoading: deletingPipeline } = useDeletePipeline();
+  const { mutate: deletePipeline } = useDeletePipeline();
+  // NEW: delete-confirmation state
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [pipelineToDelete, setPipelineToDelete] = useState(null);
+
   const [selectedWorkspace, setSelectedWorkspace] = useState(() => {
     // Only set the first workspace if workspaces array exists and has items
     return workspaces && workspaces.length > 0 ? workspaces[0] || "" : "";
@@ -640,19 +646,29 @@ function UserManagement() {
     }
   };
 
-  const handleDeletePipeline = (pipeline) => {
-  const userId = pipeline?.user_id; // PK: /user_id (must match the doc)
+  // Open the confirm dialog
+const openDeleteConfirm = (pipeline) => {
+  const userId = pipeline?.user_id;
   if (!userId) {
     toast({ title: "Delete failed", description: "user_id missing on pipeline.", variant: "destructive" });
     return;
   }
-  if (!window.confirm(`Delete pipeline "${pipeline.name}"? This cannot be undone.`)) return;
+  setPipelineToDelete(pipeline);
+  setDeleteOpen(true);
+};
+
+// Execute deletion after user confirms
+const confirmDelete = () => {
+  if (!pipelineToDelete) return;
+  const userId = pipelineToDelete.user_id;
 
   deletePipeline(
-    { id: pipeline.id, email: userId }, // route param name is :email, value = user_id
+    { id: pipelineToDelete.id, email: userId },
     {
       onSuccess: () => {
-        toast({ title: "Pipeline deleted", description: `${pipeline.name} was removed.` });
+        toast({ title: "Pipeline deleted", description: `${pipelineToDelete.name} was removed.` });
+        setDeleteOpen(false);
+        setPipelineToDelete(null);
         refetchPipelines();
       },
       onError: (e) => {
@@ -661,6 +677,7 @@ function UserManagement() {
     }
   );
 };
+
 
   // Add mock prompt history and suggested prompt for demonstration
   const getPipelinePrompts = (pipeline) => {
@@ -1393,10 +1410,9 @@ function UserManagement() {
                         >
                           <RefreshCcw className="h-4 w-4 text-blue-500" /> Run Manually
                         </DropdownMenuItem>
-
                         <DropdownMenuItem
-                          onClick={() => handleDeletePipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-red-50 focus:bg-red-100 text-gray-700"
+                          onClick={() => openDeleteConfirm(pipeline)}
+                          className="text-red-600 hover:bg-gray-100"
                         >
                           <Trash className="h-4 w-4 text-red-500" /> Delete
                         </DropdownMenuItem>
@@ -1431,6 +1447,30 @@ function UserManagement() {
       </div>
       {!isApplyingPrompt && !showSuccessTransition && (
         <>
+
+        <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+  <DialogContent className="sm:max-w-[500px] bg-white rounded-xl">
+    <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+      <AlertTriangle className="h-8 w-8 text-red-500" />
+    </div>
+    <DialogHeader className="text-center">
+      <DialogTitle className="text-2xl text-gray-900">Are you absolutely sure?</DialogTitle>
+      <DialogDescription className="mt-2 text-gray-600">
+        This action cannot be undone. This will permanently delete the pipeline{" "}
+        <span className="font-semibold text-gray-800">"{pipelineToDelete?.name}"</span>.
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="mt-6 flex w-full justify-center gap-3">
+      <Button variant="outline" className="px-6" onClick={() => setDeleteOpen(false)}>
+        Cancel
+      </Button>
+      <Button className="bg-red-600 hover:bg-red-700 text-white px-6" onClick={confirmDelete}>
+        Delete
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
           {/* View Pipeline Modal */}
           <PipelineDetailsModal
             pipeline={viewPipeline}
