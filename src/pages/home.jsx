@@ -25,6 +25,7 @@ import {
 import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
+import useFetchPipelineHistory from "../hooks/useFetchPipelineHistory";
 
 export default function Home() {
 
@@ -50,20 +51,35 @@ export default function Home() {
     }));
   }, [sources]);
 
-  const chartData = [
-    { month: "Jan", blue: 4700, green: 2900 },
-    { month: "Feb", blue: 5200, green: 3300 },
-    { month: "Mar", blue: 5000, green: 3700 },
-    { month: "Apr", blue: 5800, green: 4100 },
-    { month: "May", blue: 7000, green: 4500 },
-    { month: "Jun", blue: 7500, green: 4900 },
-    { month: "Jul", blue: 8200, green: 5300 },
-    { month: "Aug", blue: 8000, green: 5700 },
-    { month: "Sep", blue: 8400, green: 6200 },
-    { month: "Oct", blue: 9000, green: 6600 },
-    { month: "Nov", blue: 9600, green: 7000 },
-    { month: "Dec", blue: 10000, green: 7500 },
-  ];
+  const { source: historyData = [], isLoading: isHistoryLoading } = useFetchPipelineHistory();
+
+  const chartData = useMemo(() => {
+    if (!historyData || historyData.length === 0) return [];
+
+    const grouped = {};
+
+    historyData.forEach(item => {
+      if (!item.pipeline_start_time || !item.pipeline_status) return;
+
+      const date = new Date(item.pipeline_start_time).toISOString().split("T")[0];
+
+      if (!grouped[date]) {
+        grouped[date] = { date, Completed: 0, Running: 0, Failed: 0 };
+      }
+
+      const status = item.pipeline_status.toLowerCase();
+
+      if (["completed", "success"].includes(status)) {
+        grouped[date].Completed += 1;
+      } else if (status === "running") {
+        grouped[date].Running += 1;
+      } else if (status === "failed") {
+        grouped[date].Failed += 1;
+      }
+    });
+
+    return Object.values(grouped).sort((a, b) => new Date(a.date) - new Date(b.date));
+  }, [historyData]);
 
   const greeting = user ? `Welcome, ${user.name}!` : "Welcome!";
 
@@ -224,7 +240,7 @@ export default function Home() {
             >
               <div>
                 <h2 className="text-xl font-semibold text-[#2196F3]">Data Brewing Activity</h2>
-                <p className="text-sm text-[#2196F3]">Tokenization and anonymization operations over time</p>
+                <p className="text-sm text-[#2196F3]">Pipeline execution status over time</p>
               </div>
               {showExtras ? (
                 <ChevronUp className="text-[#2196F3] w-6 h-6" />
@@ -235,39 +251,53 @@ export default function Home() {
 
             <CardContent className="p-4">
               <div className="h-[300px] w-full bg-white rounded-lg">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid stroke="#ddd" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    {showExtras && (
-                      <Legend
-                        verticalAlign="top"
-                        iconType="square"
-                        formatter={(value) => (
-                          <span style={{ color: "#2196F3", fontSize: "0.875rem" }}>{value}</span>
-                        )}
+                {isHistoryLoading ? (
+                  <div className="flex justify-center items-center h-full text-[#2196F3]">
+                    Loading pipeline activity...
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData}>
+                      <CartesianGrid stroke="#ddd" />
+                      <XAxis dataKey="date" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      {showExtras && (
+                        <Legend
+                          verticalAlign="top"
+                          iconType="square"
+                          formatter={(value) => (
+                            <span style={{ color: "#2196F3", fontSize: "0.875rem" }}>{value}</span>
+                          )}
+                        />
+                      )}
+                      <Line
+                        type="monotone"
+                        dataKey="Completed"
+                        stroke="#4CAF50"
+                        strokeWidth={3}
+                        dot={{ r: 3 }}
+                        name="Completed"
                       />
-                    )}
-                    <Line
-                      type="monotone"
-                      dataKey="blue"
-                      stroke="#2196F3"
-                      strokeWidth={3}
-                      dot={{ r: 3 }}
-                      name="API Requests"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="green"
-                      stroke="#4CAF50"
-                      strokeWidth={3}
-                      dot={{ r: 3 }}
-                      name="Database Queries"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                      <Line
+                        type="monotone"
+                        dataKey="Running"
+                        stroke="#2196F3"
+                        strokeWidth={3}
+                        dot={{ r: 3 }}
+                        name="Running"
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="Failed"
+                        stroke="#f44336"
+                        strokeWidth={3}
+                        dot={{ r: 3 }}
+                        name="Failed"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>
