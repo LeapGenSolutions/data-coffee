@@ -14,7 +14,6 @@ import {
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Card, CardContent, CardHeader } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
-import { Button } from "../components/ui/button";
 import {
   Database,
   Users,
@@ -25,6 +24,10 @@ import {
 import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
+import useFetchPipeline from "../hooks/useFetchPipeline";
+import useFetchPipelineHistory from "../hooks/useFetchPipelineHistory";
+import { formatDistanceToNow } from "date-fns";
+import { RotatingActivityCard } from "../components/RotatingActivityCard";
 
 export default function Home() {
 
@@ -66,6 +69,71 @@ export default function Home() {
   ];
 
   const greeting = user ? `Welcome, ${user.name}!` : "Welcome!";
+
+  const { sources: pipelines = [] } = useFetchPipeline(workspaceID);
+  const { source: history = [] } = useFetchPipelineHistory();
+
+  const activityData = useMemo(() => {
+    const now = new Date();
+    const cutoff = new Date();
+    cutoff.setDate(now.getDate() - 15); // Last 15 days
+
+    const items = [];
+
+    pipelines.forEach(p => {
+      if (new Date(p.created_at) >= cutoff) {
+        items.push({
+          type: "created",
+          text: `New pipeline created: ${p.name}`,
+          time: p.created_at,
+        });
+      }
+
+      if (p.name.includes("Copy(") && new Date(p.created_at) >= cutoff) {
+        items.push({
+          type: "created",
+          text: `Pipeline cloned: ${p.name}`,
+          time: p.created_at,
+        });
+      }
+    });
+
+    history.forEach(h => {
+      const t = h.pipeline_start_time || h.created_at;
+      if (new Date(t) < cutoff) return;
+
+      const base = {
+        text: `${h.pipeline_name}`,
+        time: t,
+      };
+
+      const status = h.pipeline_status?.toLowerCase();
+
+      if (["success", "completed"].includes(status)) {
+        items.push({ ...base, type: "success", text: `Pipeline completed: ${base.text}` });
+      } else if (status === "failed") {
+        items.push({ ...base, type: "failed", text: `Pipeline failed: ${base.text}` });
+      } else if (status === "running") {
+        items.push({ ...base, type: "started", text: `Pipeline started: ${base.text}` });
+      }
+    });
+
+    return items
+      .map(item => ({
+        ...item,
+        ago: formatDistanceToNow(new Date(item.time), { addSuffix: true }),
+      }))
+      .sort((a, b) => new Date(b.time) - new Date(a.time));
+  }, [pipelines, history]);
+  
+  const groupedLogs = useMemo(() => {
+    return activityData.reduce((acc, item) => {
+      if (!acc[item.type]) acc[item.type] = [];
+      acc[item.type].push(item);
+      return acc;
+    }, {});
+  }, [activityData]);
+
 
   return (
     <DashboardLayout>
@@ -331,62 +399,64 @@ export default function Home() {
 
         {/* Activity Log Card */}
         <Card className="border-[#2196F3] shadow-sm">
-          <CardHeader className="bg-[#f7f1eb] flex flex-row justify-between items-center px-6 py-4 border-b border-[#2196F3]">
+          <CardHeader className="bg-[#f7f1eb] px-6 py-4 border-b border-[#2196F3]">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-semibold text-[#2196F3]">Data Brewing Activity Log</h2>
-              <Badge className="bg-[#2196F3] text-[#2196F3] text-xs">5 New</Badge>
+              <Badge className="bg-[#2196F3] text-white text-xs">
+                {activityData.length} Recent
+              </Badge>
+              <span className="text-sm text-gray-700">(from last 15 days)</span>
             </div>
-            <Button variant="ghost" className="text-[#2196F3] text-sm hover:underline">View All</Button>
           </CardHeader>
+
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                {
-                  text: "New source added",
-                  time: "3 hours ago by Madhu Chanthati",
-                  border: "border-l-[4px] border-green-700",
-                  hover: "hover:bg-green-50",
-                },
-                {
-                  text: "User account created",
-                  time: "Yesterday by Admin",
-                  border: "border-l-[4px] border-blue-700",
-                  hover: "hover:bg-blue-50",
-                },
-                {
-                  text: "System backup completed",
-                  time: "2 days ago by System",
-                  border: "border-l-[4px] border-yellow-700",
-                  hover: "hover:bg-yellow-50",
-                },
-                {
-                  text: "Report published",
-                  time: "4 days ago by Sarah Johnson",
-                  border: "border-l-[4px] border-red-700",
-                  hover: "hover:bg-red-50",
-                },
-                {
-                  text: "Failed login attempt",
-                  time: "1 week ago from 192.168.1.105",
-                  border: "border-l-[4px] border-rose-800",
-                  hover: "hover:bg-rose-50",
-                },
-                {
-                  text: "Data batch processed",
-                  time: "1 week ago by System",
-                  border: "border-l-[4px] border-purple-800",
-                  hover: "hover:bg-purple-50",
-                },
-              ].map((log, index) => (
-                <div
-                  key={index}
-                  className={`bg-white p-4 shadow-sm ${log.border} ${log.hover} rounded-r-md transition-colors duration-200`}
-                >
-                  <p className="font-semibold text-[#1e3a8a]">{log.text}</p>
-                  <p className="text-sm text-gray-600 mt-1">{log.time}</p>
-                </div>
-              ))}
-            </div>
+            {activityData.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.keys(groupedLogs).length > 0 ? (
+                  <>
+                    {groupedLogs["success"] && (
+                      <RotatingActivityCard
+                        title="Pipeline completed"
+                        logs={groupedLogs["success"]}
+                        color="#4CAF50"
+                      />
+                    )}
+                    {groupedLogs["failed"] && (
+                      <RotatingActivityCard
+                        title="Pipeline failed"
+                        logs={groupedLogs["failed"]}
+                        color="#F44336"
+                      />
+                    )}
+                    {groupedLogs["started"] && (
+                      <RotatingActivityCard
+                        title="Pipeline started"
+                        logs={groupedLogs["started"]}
+                        color="#2196F3"
+                      />
+                    )}
+                    {groupedLogs["created"] && (
+                      <RotatingActivityCard
+                        title="New pipeline created"
+                        logs={groupedLogs["created"]}
+                        color="#FFC107"
+                      />
+                    )}
+                    {groupedLogs["prompt"] && (
+                      <RotatingActivityCard
+                        title="Custom prompt submitted"
+                        logs={groupedLogs["prompt"]}
+                        color="#9C27B0" 
+                      />
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-500 text-sm">No recent activity in the last 15 days.</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-sm">No recent activity in the last 15 days.</p>
+            )}
           </CardContent>
         </Card>
 
