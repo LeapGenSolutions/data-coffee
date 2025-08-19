@@ -37,18 +37,15 @@ import {
   Server,
   Globe,
   CheckCircle,
-  RefreshCcw,
 } from "lucide-react";
 import ToggleButton from "./ui/toggle-button";
-import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
-import { useListAzureBlobFiles } from "../hooks/useListAzureBlobFiles";
-import { cn } from "../lib/utils";
 import { useSaveSource } from "../hooks/useSaveSource";
 import { usePatchSource } from "../hooks/usePatchSource.js";
 import { useFetchSourceTypes } from "../hooks/useFetchSourceTypes";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
-
+import { cn } from "../lib/utils";
+import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
 
 // Define basic schema and schemas for each source type and location
 const baseSchema = z.object({
@@ -218,19 +215,17 @@ const getValidationSchema = (sourceType, location) => {
   return schema;
 };
 
-export function SourceForm({ mode = "add", initialSource,  
+export function SourceForm({ mode = "add", initialSource,
   onCancel, onSourceSaved, currentWorkspace }) {
   const [, setErrors] = useState({});
+  // Data fetching hooks
+  const { data: sourceTypes, isLoading, error } = useFetchSourceTypes();
+  const testAzureBlobConnection = useTestAzureBlobConnection();
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
   const [sourceStatus, setSourceStatus] = useState("Active");
-  const testAzureBlobConnection = useTestAzureBlobConnection();
-  const listAzureBlobFiles = useListAzureBlobFiles();
   const user = useSelector((state) => state.me.me);
-
-  // Add uploadedFiles state at the top level
-  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   // Create dynamic schema based on current selections
   const dynamicSchema = getValidationSchema(sourceType, location);
@@ -244,17 +239,12 @@ export function SourceForm({ mode = "add", initialSource,
       sourceType: "",
       location: "on-prem",
 
-      dataSelectionMode: "",
     },
   });
 
   // Watch for changes in form values to update state
   const watchSourceType = form.watch("sourceType");
-  const watchLocation = form.watch("location");
-  const watchFileFormat = form.watch("fileFormat");
-  const watchContainerName = form.watch("containerName");
-  const watchPathPrefix = form.watch("pathPrefix");
-  const watchCloudProvider = form.watch("cloudProvider");
+  const watchLocation = form.watch("location");  // retained for configuration
 
 
   useEffect(() => {
@@ -287,105 +277,6 @@ export function SourceForm({ mode = "add", initialSource,
     }
   }, [initialSource, form]);
 
-  useEffect(() => {
-    setAzureFiles([]);
-    setSelectedTables([]);
-    setIsAzureFilesLoaded(false);
-  }, [watchFileFormat, watchContainerName, watchPathPrefix]);
-  const { data: sourceTypes, isLoading, error } = useFetchSourceTypes();
-
-  // Data selection state
-  const [selectionMode, setSelectionMode] = useState("all");
-  const [selectedTables, setSelectedTables] = useState([]);
-  const [expandedTables, setExpandedTables] = useState([]);
-  const [customQuery, setCustomQuery] = useState("");
-  const [tableSearchQuery, setTableSearchQuery] = useState("");
-  // For Azure Blob file listing
-  const [azureFiles, setAzureFiles] = useState([]);
-  const [isAzureFilesLoaded, setIsAzureFilesLoaded] = useState(false);
-
-  const handleListFilesButtonClick = async () => {
-    const connectionString = form.getValues("connectionString");
-    const containerName = form.getValues("containerName");
-    const blobPath = form.getValues("pathPrefix") || "";
-    const fileType = form.getValues("fileFormat");
-    if (!connectionString || !containerName || !fileType) {
-      return;
-    }
-    console.log({
-      connectionString: form.getValues("connectionString"),
-      containerName: form.getValues("containerName"),
-      blobPath: form.getValues("pathPrefix"),
-      fileType: form.getValues("fileFormat"),
-    });
-    listAzureBlobFiles.mutate(
-      { connectionString, containerName, blobPath: blobPath || "", fileType },
-      {
-        onSuccess: (data) => {
-          if (data.success && Array.isArray(data.files)) {
-            setAzureFiles(data.files);
-            setIsAzureFilesLoaded(true);
-            setSelectedTables(data.files);
-          } else {
-            setAzureFiles([]);
-            setIsAzureFilesLoaded(false);
-            toast({
-              title: "No files found",
-              description: "No files of the selected type were found in the container.",
-              variant: "destructive",
-            });
-          }
-        },
-        onError: (error) => {
-          setAzureFiles([]);
-          setIsAzureFilesLoaded(false);
-          toast({
-            title: "Error listing files",
-            description: error?.response?.data?.message || error.message || "Could not list files from Azure Blob Storage.",
-            variant: "destructive",
-          });
-        },
-      }
-    );
-  }
-
-
-  useEffect(() => {
-    const currentSourceType = form.getValues("sourceType");
-    const currentLocation = form.getValues("location");
-    const connectionString = form.getValues("connectionString");
-    const containerName = form.getValues("containerName");
-    const blobPath = form.getValues("pathPrefix");
-    const fileType = form.getValues("fileFormat");
-
-    if (
-      step === 3 &&
-      selectionMode === "specific" &&
-      currentSourceType === "files" &&
-      currentLocation === "cloud" &&
-      watchCloudProvider === "azure" &&
-      azureFiles.length === 0 &&
-      watchFileFormat &&
-      watchContainerName &&
-      form.getValues("connectionString")
-    ) {
-      handleListFilesButtonClick({
-        connectionString,
-        containerName,
-        blobPath,
-        fileType
-      });
-    }
-  }, [
-    step,
-    selectionMode,
-    azureFiles.length,
-    watchFileFormat,
-    watchContainerName,
-    watchPathPrefix,
-    watchCloudProvider
-  ]);
-
   const saveSourceMutation = useSaveSource();
   const patchSourceMutation = usePatchSource();  
 
@@ -401,9 +292,6 @@ export function SourceForm({ mode = "add", initialSource,
       location: location || currentData.location || "on-prem",
       authType: currentData.authType || "",
 
-      dataSelectionMode: currentData.dataSelectionMode || "all",
-      selectedTables: currentData.selectedTables || selectedTables || [],
-      customQuery: currentData.customPrompt || "",
       configuration: currentData,
       status: sourceStatus,
       lastSync: new Date().toISOString(),
@@ -504,8 +392,6 @@ export function SourceForm({ mode = "add", initialSource,
   const onSubmit = (data) => {
     console.log("onSubmit called with data:", data);
     console.log("Current form values:", form.getValues());
-    console.log("Selection mode:", selectionMode);
-    console.log("Selected tables:", selectedTables);
 
     // Create a new source object with all the form data
     const newSource = {
@@ -513,11 +399,7 @@ export function SourceForm({ mode = "add", initialSource,
       name: data.sourceName || "Untitled Source",
       type: data.sourceType || "unknown",
       location: location || data.location || "on-prem",
-
-      dataSelectionMode: selectionMode || "all",
-      selectedTables: selectedTables || [],
-      customQuery: customQuery || "",
-      configuration: data, // Store all form data as configuration
+      configuration: data, // Data Selection removed
       status: "Active",
       lastSync: new Date().toISOString(),
       createdAt: new Date().toISOString()
@@ -569,664 +451,7 @@ export function SourceForm({ mode = "add", initialSource,
       form.setValue("step", step - 1);
     }
   };
-
-  // Get data selection options based on source type
-  const getDataSelectionOptions = (sourceType) => {
-    switch (sourceType) {
-      case "sql":
-      case "oracle":
-      case "postgresql":
-        return [
-          {
-            value: "all",
-            label: "Select All Tables - Extract all tables from the database",
-          },
-          {
-            value: "specific",
-            label: "List Specific Tables - Choose individual tables to extract",
-          },
-          {
-            value: "query",
-            label:
-              "Write a Query - Custom SQL to filter or join data as needed",
-          },
-        ];
-      case "mongodb":
-        return [
-          {
-            value: "all",
-            label: "Select All Collections",
-          },
-          {
-            value: "specific",
-            label: "Select Specific Collections",
-          },
-          {
-            value: "query",
-            label: "Write an Aggregation Pipeline (optional advanced)",
-          },
-        ];
-      case "files":
-        return [
-          {
-            value: "all",
-            label: "Upload Entire File - CSV/Excel/JSON/Parquet",
-          },
-          {
-            value: "specific",
-            label: "Select Specific Sheets/Columns - For Excel or structured formats",
-          },
-          {
-            value: "query",
-            label: "Apply Row Filters - e.g., load rows with status = \"active\"",
-          },
-        ];
-      case "blob":
-        return [
-          {
-            value: "all",
-            label: "Ingest All Files - From a container or path prefix",
-          },
-          {
-            value: "specific",
-            label: "Select Files - Individual files or via pattern matching",
-          },
-          {
-            value: "query",
-            label: "Filter by Metadata - Ingest only recent/active/flagged",
-          },
-        ];
-      case "rest":
-        return [
-          {
-            value: "all",
-            label: "Full Endpoint - Ingest entire API response",
-          },
-          {
-            value: "specific",
-            label: "Specify Resource Paths - Choose specific endpoints",
-          },
-          {
-            value: "query",
-            label: "Write Custom Request - Compose full request with params/body",
-          },
-        ];
-      case "datawarehouse":
-        return [
-          {
-            value: "all",
-            label:
-              "Select All Tables / Datasets - Ingest all tables from a schema or project",
-          },
-          {
-            value: "specific",
-            label: "Choose Specific Tables - Pick tables manually",
-          },
-          {
-            value: "query",
-            label:
-              "Write SQL Query - Extract with complex joins or aggregations",
-          },
-        ];
-      default:
-        return [
-          {
-            value: "all",
-            label:
-              "Select All Data - Extract all available data from this source",
-          },
-          {
-            value: "specific",
-            label: "Select Specific Items - Choose individual items to extract",
-          },
-          {
-            value: "query",
-            label:
-              "Custom Query - Write custom logic to filter or transform data",
-          },
-        ];
-    }
-  };
-
-  // Render data selection step
-  const renderDataSelectionStep = () => {
-    const currentSourceType = form.watch("sourceType");
-    if (!currentSourceType) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-500">
-            Please complete the previous steps to continue
-          </p>
-        </div>
-      );
-    }
-
-    // Get appropriate terminology based on source type
-    const getItemTerminology = (sourceType) => {
-      switch (sourceType) {
-        case "mongodb":
-          return {
-            single: "collection",
-            plural: "collections",
-            field: "field",
-            fields: "fields",
-          };
-        case "files":
-        case "blob":
-          return {
-            single: "file",
-            plural: "files",
-            field: "property",
-            fields: "properties",
-          };
-        case "rest":
-          return {
-            single: "endpoint",
-            plural: "endpoints",
-            field: "field",
-            fields: "fields",
-          };
-        case "datawarehouse":
-          return {
-            single: "dataset",
-            plural: "datasets",
-            field: "column",
-            fields: "columns",
-          };
-        default:
-          return {
-            single: "table",
-            plural: "tables",
-            field: "column",
-            fields: "columns",
-          };
-      }
-    };
-    const getFilesListSection = () => {
-
-      return (
-        <div className="mt-4">
-          {/* Title + Radio Buttons Row */}
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center space-x-6">
-              <p className="text-sm font-medium text-gray-900">
-                Select Files: <span className="text-gray-500">({selectedTables.length} selected)</span>
-              </p>
-              <label className="inline-flex items-center space-x-1 text-sm">
-                <input
-                  type="radio"
-                  name="fileSelection"
-                  value="selectAll"
-                  onChange={() => setSelectedTables([...azureFiles])}
-                  checked={selectedTables.length === azureFiles.length}
-                />
-                <span>Select All</span>
-              </label>
-              <label className="inline-flex items-center space-x-1 text-sm">
-                <input
-                  type="radio"
-                  name="fileSelection"
-                  value="unselectAll"
-                  onChange={() => setSelectedTables([])}
-                  checked={selectedTables.length === 0}
-                />
-                <span>Unselect All</span>
-              </label>
-            </div>
-          </div>
-
-          {/* File List */}
-          <div className="max-h-64 overflow-y-auto border rounded p-2 bg-gray-50">
-            {azureFiles.map((file) => (
-              <label key={file} className="flex items-center space-x-2 mb-1">
-                <input
-                  type="checkbox"
-                  checked={selectedTables.includes(file)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedTables([...selectedTables, file]);
-                    } else {
-                      setSelectedTables(selectedTables.filter((f) => f !== file));
-                    }
-                  }}
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="text-xs text-gray-700">{file}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      );
-    };
-
-    // Get query-related helpers
-    const getQueryDescription = (sourceType) => {
-      switch (sourceType) {
-        case "mongodb":
-          return "Write a MongoDB aggregation pipeline to filter and transform your data:";
-        case "files":
-          return "Define file parsing rules including file type, schema, and delimiters:";
-        case "blob":
-          return "Define file parsing rules including schema, encoding, and structure settings:";
-        case "rest":
-          return "Write custom API request configuration with parameters, headers, and HTTP methods:";
-        default:
-          return "Write a custom SQL query to extract specific data:";
-      }
-    };
-
-    const getQueryEditorTitle = (sourceType) => {
-      switch (sourceType) {
-        case "mongodb":
-          return "MongoDB Pipeline Editor";
-        case "files":
-          return "File Parsing Rules Editor";
-        case "blob":
-          return "Blob Parsing Rules Editor";
-        case "rest":
-          return "API Request Editor";
-        default:
-          return "SQL Query Editor";
-      }
-    };
-
-    const getQueryPlaceholder = (sourceType) => {
-      switch (sourceType) {
-        case "mongodb":
-          return '[{"$match": {"field": "value"}}, {"$group": {...}}]';
-        case "files":
-          return '{\n  "fileType": "CSV",\n  "delimiter": ",",\n  "encoding": "UTF-8",\n  "hasHeader": true\n}';
-        case "blob":
-          return '{\n  "containerName": "data",\n  "filePattern": "*.json",\n  "encoding": "UTF-8"\n}';
-        case "rest":
-          return '{\n  "method": "GET",\n  "headers": {"Authorization": "Bearer token"},\n  "params": {"limit": 100}\n}';
-        default:
-          return "SELECT * FROM table_name WHERE condition";
-      }
-    };
-
-    const getQueryType = (sourceType) => {
-      switch (sourceType) {
-        case "mongodb":
-          return "Pipeline";
-        case "files":
-        case "blob":
-          return "Parsing Rules";
-        case "rest":
-          return "API Request";
-        default:
-          return "Query";
-      }
-    };
-
-    const terminology = getItemTerminology(currentSourceType);
-
-
-
-    return (
-      <div className="space-y-6">
-        <div className="border rounded-md p-5 bg-gradient-to-r from-blue-50 to-white border-gray-200">
-          <h4 className="text-md font-medium mb-3 text-gray-900">
-            Data Selection Mode
-          </h4>
-          <p className="text-sm text-gray-600 mb-4">
-            Choose how you want to extract data from your{" "}
-            {currentSourceType.toUpperCase()} source.
-          </p>
-
-          <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id="select-all"
-                name="selection-mode"
-                value="all"
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                checked={selectionMode === "all"}
-                onChange={() => setSelectionMode("all")}
-              />
-              <label
-                htmlFor="select-all"
-                className="text-sm font-medium text-gray-900"
-              >
-                {getDataSelectionOptions(currentSourceType)[0]?.label || "Select All Data"}
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id="select-specific"
-                name="selection-mode"
-                value="specific"
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                checked={selectionMode === "specific"}
-                onChange={() => setSelectionMode("specific")}
-              />
-              <label
-                htmlFor="select-specific"
-                className="text-sm font-medium text-gray-900"
-              >
-                {getDataSelectionOptions(currentSourceType)[1]?.label || "Select Specific Items"}
-              </label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="radio"
-                id="select-query"
-                name="selection-mode"
-                value="query"
-                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                checked={selectionMode === "query"}
-                onChange={() => setSelectionMode("query")}
-              />
-              <label
-                htmlFor="select-query"
-                className="text-sm font-medium text-gray-900"
-              >
-                {getDataSelectionOptions(currentSourceType)[2]?.label || "Custom Query"}
-              </label>
-            </div>
-          </div>
-
-          {/* Show appropriate UI based on selection mode */}
-          <div className="mt-6">
-            {selectionMode === "all" && currentSourceType === "files" && (
-              <div className="space-y-4">
-                <div className="bg-white p-4 rounded-md border border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    All files will be uploaded and processed. Choose your file below:
-                  </p>
-                </div>
-
-                {/* File Upload Component */}
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 bg-gray-50 hover:bg-gray-100 transition-colors">
-                  <div className="text-center">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    <div className="mt-4">
-                      <label htmlFor="file-upload" className="cursor-pointer">
-                        <span className="mt-2 block text-sm font-medium text-gray-900">
-                          Drop files here or click to upload
-                        </span>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          className="sr-only"
-                          multiple
-                          accept=".csv,.xlsx,.xls,.json,.parquet,.xml,.txt,.png,.jpeg,.jpg,.pdf"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files);
-                            setUploadedFiles(files);
-                            // Handle file upload logic here
-                          }}
-                        />
-                      </label>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Supports CSV, Excel, JSON, Parquet, XML, TXT, PNG, JPEG, JPG, PDF files
-                      </p>
-                    </div>
-                    {/* Show selected files */}
-                    {uploadedFiles.length > 0 && (
-                      <div className="mt-4 text-left">
-                        <p className="text-xs font-semibold text-gray-700 mb-1">Selected file{uploadedFiles.length > 1 ? 's' : ''}:</p>
-                        <ul className="text-xs text-gray-600 space-y-1">
-                          {uploadedFiles.map((file, idx) => (
-                            <li key={file.name + idx} className="truncate">{file.name}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {selectionMode === "all" && currentSourceType !== "files" && (
-              <div className="bg-white p-4 rounded-md border border-gray-200">
-                <p className="text-sm text-gray-600">
-                  All available {terminology.plural} will be extracted from this
-                  source during data collection. This may include a large amount
-                  of data depending on the source size.
-                </p>
-              </div>
-            )}
-
-            {selectionMode === "specific" && currentSourceType === "files" && (
-              <div className="space-y-4">
-                <div className="bg-white p-4 rounded-md border border-gray-200">
-                  {/* Azure Blob Storage: List files for selection */}
-                  {location === "cloud" && form.getValues("cloudProvider") === "azure" ? (
-                    <>
-                      <div className="flex justify-end mt-4">
-                        <button
-                          type="button"
-                          className="mb-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                          disabled={listAzureBlobFiles.isLoading}
-                          onClick={() => {
-                            handleListFilesButtonClick({
-                              connectionString: form.getValues("connectionString"),
-                              containerName: form.getValues("containerName"),
-                              blobPath: form.getValues("pathPrefix"),
-                              fileType: form.getValues("fileFormat")
-                            });
-                          }}
-                        >
-                          {listAzureBlobFiles.isLoading ? (
-                            "Loading Files..."
-                          ) : (
-                            <RefreshCcw className="w-4 h-4" />
-                          )}
-                        </button>
-
-                      </div>
-                      {isAzureFilesLoaded && azureFiles.length > 0 && getFilesListSection()}
-                    </>
-                  ) : (
-                    // Fallback: original file upload logic for on-prem or non-Azure
-                    <>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
-                        <div className="text-center">
-                          <svg className="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          <label htmlFor="specific-file-upload" className="cursor-pointer">
-                            <span className="text-sm font-medium text-gray-900">Upload Excel or CSV file</span>
-                            <input
-                              id="specific-file-upload"
-                              type="file"
-                              className="sr-only"
-                              accept=".xlsx,.xls,.csv"
-                              onChange={(e) => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                  // Simulate sheet/column detection
-                                  setSelectedTables(["Sheet1", "Sheet2", "Data"]);
-                                  setExpandedTables(["Sheet1"]);
-                                }
-                              }}
-                            />
-                          </label>
-                          <p className="text-xs text-gray-500 mt-1">Excel or CSV files only</p>
-                        </div>
-                      </div>
-                      {/* Sheet/Column Selection (appears after file upload) */}
-                      {selectedTables.length > 0 && (
-                        <div className="mt-4 space-y-3">
-                          <p className="text-sm font-medium text-gray-900">Select Sheets and Columns:</p>
-                          {selectedTables.map((sheet) => (
-                            <div key={sheet} className="border border-gray-200 rounded-lg p-3 bg-white">
-                              <div className="flex items-center justify-between mb-2">
-                                <label className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    defaultChecked
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                  />
-                                  <span className="text-sm font-medium text-gray-900">{sheet}</span>
-                                </label>
-                                <button
-                                  onClick={() => {
-                                    setExpandedTables(prev =>
-                                      prev.includes(sheet)
-                                        ? prev.filter(t => t !== sheet)
-                                        : [...prev, sheet]
-                                    );
-                                  }}
-                                  className="text-blue-600 text-xs hover:text-blue-800"
-                                >
-                                  {expandedTables.includes(sheet) ? "Hide Columns" : "Show Columns"}
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {selectionMode === "specific" && currentSourceType !== "files" && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-medium text-gray-900">
-                    Step 1: Select{" "}
-                    {terminology.plural.charAt(0).toUpperCase() +
-                      terminology.plural.slice(1)}
-                  </p>
-                  <div className="space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedTables([])}
-                      className="text-xs border-gray-200 text-gray-600 hover:bg-blue-50"
-                    >
-                      Clear All
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        console.log("Select All Tables Clicked");
-                        
-                      }}
-                      className="text-xs border-gray-200 text-gray-600 hover:bg-blue-50"
-                    >
-                      Select All
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Search bar for filtering tables */}
-                <div className="mb-2">
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg
-                        className="h-5 w-5 text-gray-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </div>
-                    <input
-                      type="text"
-                      className="block w-full pl-10 pr-3 py-2 border border-gray-200 rounded-md bg-white text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder={`Search ${terminology.plural}...`}
-                      value={tableSearchQuery}
-                      onChange={(e) => setTableSearchQuery(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-sm text-gray-900">
-                    {selectedTables.length} {terminology.plural} selected
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {selectionMode === "query" && (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-900">
-                  {getQueryDescription(currentSourceType)}
-                </p>
-                <div className="bg-white rounded-md border border-gray-200 overflow-hidden">
-                  <div className="flex items-center justify-between px-3 py-1 border-b border-gray-200 bg-gray-50">
-                    <span className="text-xs text-gray-700">
-                      {getQueryEditorTitle(currentSourceType)}
-                    </span>
-                    <div className="flex space-x-1">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    </div>
-                  </div>
-                  <Textarea
-                    value={customQuery}
-                    onChange={(e) => setCustomQuery(e.target.value)}
-                    className="font-mono text-sm !text-gray-900 !bg-white border-0 focus:ring-0 h-40 resize-none p-3 placeholder:!text-gray-500"
-                    style={{
-                      backgroundColor: "white !important",
-                      color: "#111827 !important",
-                    }}
-                    placeholder={getQueryPlaceholder(currentSourceType)}
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-xs border-blue-500 text-blue-600 hover:bg-blue-50"
-                    onClick={() => {
-                      // In a real implementation, this would validate the query
-                      toast({
-                        title: `${getQueryType(currentSourceType)} syntax looks good`,
-                        description: `The ${getQueryType(currentSourceType).toLowerCase()} has been validated.`,
-                      });
-                    }}
-                  >
-                    Validate {getQueryType(currentSourceType)}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-r from-blue-50 to-white p-4 rounded-md border border-blue-200">
-          <div className="flex items-start gap-3">
-            <div className="mt-1 bg-white p-2 rounded-full border border-blue-300">
-              <Database className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h4 className="text-md font-medium text-gray-900">
-                Ready to Configure Data Source
-              </h4>
-              <p className="text-sm text-gray-600 mt-1">
-                Your data selection is configured. In the next step, you'll
-                confirm your selections before we start connecting and
-                processing your data.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
+    
   // Continue with other render methods...
   const renderConfirmationStep = () => {
     const data = form.getValues();
@@ -1274,43 +499,7 @@ export function SourceForm({ mode = "add", initialSource,
                   {locationName}
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-gray-700">Collection Mode</p>
-                <p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">
-                  {selectionMode === 'all' ? 'Select All' : selectionMode === 'specific' ? 'Select Specific Items' : 'Custom Query/Rules'}
-                </p>
-              </div>
             </div>
-
-            {/* Data Selection Summary */}
-            {selectionMode === 'specific' && selectedTables.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Selected Items</h4>
-                <div className="bg-white border border-gray-200 rounded-md">
-                  <div className="divide-y divide-gray-200">
-                    {selectedTables.map((table) => (
-                      <div key={table} className="p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-gray-900">{table}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Custom Query Summary */}
-            {selectionMode === 'query' && customQuery && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-medium text-gray-700">Custom Query/Rules</h4>
-                <div className="bg-white border border-gray-200 rounded-md p-3">
-                  <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono">
-                    {customQuery.length > 200 ? customQuery.substring(0, 200) + '...' : customQuery}
-                  </pre>
-                </div>
-              </div>
-            )}
 
 
 
@@ -1884,12 +1073,12 @@ export function SourceForm({ mode = "add", initialSource,
             placeholder: "Select file format",
             options: [
               { value: "all", label: "All" },
-              { value: "csv", label: "CSV" },
+              { value: "csv/xlsx", label: "CSV/XLSX" },
               { value: "json", label: "JSON" },
-              { value: "png", label: "PNG" },
-              { value: "jpeg", label: "JPEG" },
+              { value: "png/jpeg/jpg", label: "PNG/JPEG/JPG" },
               { value: "pdf", label: "PDF" },
-              { value: "jpg", label: "JPG" }
+              { value: "ppt", label: "PPT" },
+              { value: "docx", label: "DOCX" },
             ]
           }
         ];
@@ -1963,12 +1152,12 @@ export function SourceForm({ mode = "add", initialSource,
             placeholder: "Select file format",
             options: [
               { value: "all", label: "All" },
-              { value: "csv", label: "CSV" },
+              { value: "csv/xlsx", label: "CSV/XLSX" },
               { value: "json", label: "JSON" },
-              { value: "png", label: "PNG" },
-              { value: "jpeg", label: "JPEG" },
+              { value: "png/jpeg/jpg", label: "PNG/JPEG/JPG" },
               { value: "pdf", label: "PDF" },
-              { value: "jpg", label: "JPG" }
+              { value: "ppt", label: "PPT" },
+              { value: "docx", label: "DOCX" },
             ]
           }
         ];
@@ -2501,8 +1690,6 @@ export function SourceForm({ mode = "add", initialSource,
       case 2:
         return renderConfigurationStep();
       case 3:
-        return renderDataSelectionStep();
-      case 4:
         return renderConfirmationStep();
       default:
         return null;
@@ -2512,8 +1699,7 @@ export function SourceForm({ mode = "add", initialSource,
   const stepTitles = {
     1: "Basic Information",
     2: "Configuration",
-    3: "Data Selection",
-    4: "Confirmation",
+    3: "Confirmation",
   };
 
   return (
@@ -2545,7 +1731,7 @@ export function SourceForm({ mode = "add", initialSource,
 
         {/* Progress indicator */}
         <div className="flex items-center space-x-2 mt-4">
-          {[1, 2, 3, 4].map((stepNumber) => (
+          {[1, 2, 3].map((stepNumber) => (
             <div key={stepNumber} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${stepNumber <= step
@@ -2555,7 +1741,7 @@ export function SourceForm({ mode = "add", initialSource,
               >
                 {stepNumber}
               </div>
-              {stepNumber < 4 && (
+              {stepNumber < 3 && (
                 <ChevronRight
                   className={`h-4 w-4 mx-2 ${stepNumber < step ? "text-[#2196F3]" : "text-gray-300"
                     }`}
@@ -2598,7 +1784,7 @@ export function SourceForm({ mode = "add", initialSource,
 
         <div className="flex space-x-3">
 
-          {step < 4 ? (
+          {step < 3 ? (
             <Button
               type="button"
               onClick={nextStep}
