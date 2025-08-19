@@ -56,12 +56,12 @@ import useSavePipeline from "../hooks/useSavePipeline";
 import useFetchPipeline from "../hooks/useFetchPipeline";
 import useFetchCustomPrompt from "../hooks/useFetchCustomPrompt";
 import { useClonePipeline } from "../hooks/useSavePipeline";
+import useFetchPromptHistory from '../hooks/useFetchPromptHistory';
 // Custom prompt fetch hook
 // Handler for Use Prompt button
 import { useSelector } from "react-redux";
 import usePatchPipeline from '../hooks/usePatchPipeline';
 import { format } from 'date-fns';
-import { BACKEND_URL } from '../constants';
 import { PipelineDetailsModal } from './pipeline-details-modal';
 import useDeletePipeline from "../hooks/useDeletePipeline";
 
@@ -123,7 +123,11 @@ function UserManagement() {
     isLoading: pipelineLoading,
     error: pipelineError,
     refetch: refetchPipelines } = useFetchPipeline(selectedWorkspace.id);
-
+  const {
+    promptHistory: promptHistory,
+    isLoading: promptHistoryLoading,
+    error: promptHistoryError,
+    refetch: refetchPromptHistory } = useFetchPromptHistory(promptPipeline?.id || "");
   const savePipeline = useSavePipeline();
   const patchPipeline = usePatchPipeline();
 
@@ -141,6 +145,13 @@ function UserManagement() {
       refetchPipelines();
     }
   }, [savePipeline.isSuccess, patchPipeline.isSuccess]);
+
+  // Fetch prompt history when a pipeline is opened
+  useEffect(() => {
+    if (promptPipeline?.id) {
+      refetchPromptHistory();
+    }
+  }, [promptPipeline]);
 
   // Sample user data with medical context (fallback for demo)
   const [pipelines, setPipelines] = useState([]);
@@ -667,20 +678,6 @@ function UserManagement() {
         content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
         timestamp: "2024-07-01 10:00",
       },
-      promptHistory: [
-        {
-          title: "Automate Anonymization",
-          description: "Implement automated patient data anonymization using advanced AI techniques.",
-          content: "Implement automated patient data anonymization using advanced AI techniques for privacy compliance.",
-          timestamp: "2024-06-28 09:30",
-        },
-        {
-          title: "Real-time Processing",
-          description: "Enable real-time data processing for critical patient and clinical workflows.",
-          content: "Enable real-time data processing for critical patient and clinical workflows.",
-          timestamp: "2024-06-20 14:15",
-        },
-      ],
     };
   };
 
@@ -1492,7 +1489,7 @@ function UserManagement() {
                 </DialogTitle>
               </DialogHeader>
               {promptPipeline && (() => {
-                const { surroundAIPrompt, suggestedPrompt, promptHistory } = getPipelinePrompts(promptPipeline);
+                const { surroundAIPrompt, suggestedPrompt } = getPipelinePrompts(promptPipeline);
                 return (
                   <>
                     {/* Suggested Prompt */}
@@ -1544,7 +1541,7 @@ function UserManagement() {
                     <div>
                       <div className="font-semibold text-gray-800 mb-3 text-base">Prompt Version History</div>
                       <div className="space-y-4">
-                        {promptHistory.map((prompt, idx) => (
+                        {promptHistory && promptHistory.length > 0 ? promptHistory.map((prompt, idx) => (
                           <div
                             key={prompt.title + prompt.timestamp}
                             className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-4 flex items-start gap-3"
@@ -1553,10 +1550,9 @@ function UserManagement() {
                               <Sparkles className="h-5 w-5 text-purple-500" />
                             </span>
                             <span className="flex-1">
-                              <div className="font-semibold text-gray-900 text-base mb-1">{prompt.title}</div>
-                              <div className="text-sm text-gray-600 mb-2">{prompt.description}</div>
-                              <div className="text-xs text-gray-400 mb-2">{prompt.timestamp}</div>
-                              {pipelinePrompts[promptPipeline?.id]?.content === prompt.content ? (
+                              <div className="text-sm text-gray-600 mb-2">{prompt.generated_prompt}</div>
+                              <div className="text-xs text-gray-400 mb-2">{prompt.generated_at ? format(new Date(prompt.generated_at), "PPPp") : ""}</div>
+                              {promptPipeline?.customPrompt === prompt.content ? (
                                 <span className="ml-2 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">Currently in use</span>
                               ) : (
                                 <Button
@@ -1575,7 +1571,9 @@ function UserManagement() {
                               )}
                             </span>
                           </div>
-                        ))}
+                        )) : (
+                          <div className="text-gray-500 text-sm text-center">No prompt history available.</div>
+                        )}
                       </div>
                     </div>
                   </>
