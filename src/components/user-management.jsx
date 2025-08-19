@@ -226,11 +226,13 @@ function UserManagement() {
   };
 
   function handleUsePromptClick() {
-    if (!promptPipeline || !promptPipeline.id) return;
-    fetchCustomPrompt.mutate(
-      { pipelineID: promptPipeline.id },
-      {
-        onSuccess: (data) => {
+    if (!promptPipeline || !promptPipeline.id || !promptPipeline.processing_agent) return;
+    fetchCustomPrompt.mutate({
+      pipelineID: promptPipeline.id,
+      agentType: promptPipeline.processingAgent || promptPipeline.processing_agent || ""
+    },
+    {
+      onSuccess: (data) => {
           console.log(data);
 
           setReviewPromptContent(data?.new_feedback_prompt);
