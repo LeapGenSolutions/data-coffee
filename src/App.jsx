@@ -86,7 +86,7 @@ function Main() {
 
   useEffect(() => {
     if (isAuthenticated && accounts.length > 0 && workspaces.length === 0) {
-      dispatch(fetchWorkspaces(accounts[0].username));
+      dispatch(fetchWorkspaces(accounts[0].idTokenClaims.email));
     }
   }, [isAuthenticated, accounts, dispatch, workspaces.length]);
 

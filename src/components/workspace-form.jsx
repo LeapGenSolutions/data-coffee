@@ -62,8 +62,8 @@ export default function WorkspaceForm({ onWorkspaceCreated }) {
     saveWorkspace.mutate(
       { email: user.email, workspace: newWorkspace },
       {
-        onSuccess: () => {
-          if (onWorkspaceCreated) onWorkspaceCreated();
+        onSuccess: (createdWorkspace) => {
+          if (onWorkspaceCreated) onWorkspaceCreated(createdWorkspace);
           navigate("/admin");
         },
         onError: (err) => console.error("Save failed", err),
