@@ -38,7 +38,7 @@ import {
   Globe,
   CheckCircle,
 } from "lucide-react";
-import ToggleButton from "./ui/toggle-button";
+
 import { useSaveSource } from "../hooks/useSaveSource";
 import { usePatchSource } from "../hooks/usePatchSource.js";
 import { useFetchSourceTypes } from "../hooks/useFetchSourceTypes";
@@ -224,7 +224,6 @@ export function SourceForm({ mode = "add", initialSource,
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
-  const [sourceStatus, setSourceStatus] = useState("Active");
   const user = useSelector((state) => state.me.me);
 
   // Create dynamic schema based on current selections
@@ -293,7 +292,7 @@ export function SourceForm({ mode = "add", initialSource,
       authType: currentData.authType || "",
 
       configuration: currentData,
-      status: sourceStatus,
+      status: "Active",
       lastSync: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       workspaceId: currentWorkspace.id,
@@ -1709,23 +1708,7 @@ export function SourceForm({ mode = "add", initialSource,
           <Database className="h-6 w-6 text-[#2196F3]" />
           Add Data Source - {stepTitles[step]}
         </CardTitle>
-        <div className="absolute top-8 right-9 z-50 flex items-center gap-4">
-          <ToggleButton
-            checked={sourceStatus === "Active"}
-            onChange={() =>
-              setSourceStatus((prev) =>
-                prev === "Active" ? "Inactive" : "Active"
-              )
-            }
-          />
-          {/* Status text */}
-          <span
-            className={`text-sm font-medium w-[40px] text-right ${sourceStatus === "Active" ? "text-green-600" : "text-red-500"
-              }`}
-          >
-            {sourceStatus}
-          </span>
-        </div>
+
 
 
 
