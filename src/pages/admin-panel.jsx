@@ -10,10 +10,11 @@ import useFetchSources from "../hooks/useFetchSources";
 import { useLocation } from "wouter";
 import useDeleteSource from '../hooks/useDeleteSource';
 import WorkspaceForm from "../components/workspace-form";
-import { useUserWorkspaces } from "../hooks/useUserWorkspaces"; 
-
+import { useDispatch } from 'react-redux';
+import { workspacesActions } from '../redux/workspace-slice';
 export default function AdminPanel() {
   const [location, setLocation] = useLocation();
+  const dispatch = useDispatch();
   const [sources, setSources] = useState([]);
 
   const isAdd = location === "/admin/source";
@@ -23,7 +24,7 @@ export default function AdminPanel() {
 
 
   const currentUserEmail = useSelector((state) => state.me.me?.email);
-  const { data: workspaces = [], refetch: refetchWorkspaces } = useUserWorkspaces(currentUserEmail);
+  const workspaces = useSelector((state) => state.workspaces.workspaces);
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
   const { sources: fetchedSources, isLoading, error, refetch } = useFetchSources(selectedWorkspace?.id);
 
@@ -38,9 +39,7 @@ export default function AdminPanel() {
   const editingSource = isEdit
     ? sources.find((s) => String(s.id) === editingId)
     : null;
-  //console.log("Selected workspace ID:", selectedWorkspace?.id);
 
-  // Set default workspace
   useEffect(() => {
   if (
     Array.isArray(workspaces) &&
@@ -68,26 +67,18 @@ export default function AdminPanel() {
       console.error("Error deleting source:", err);
     }
   };
-
-  const handleWorkspaceCreated = async (newWorkspace) => {
-  try {
-    const result = await refetchWorkspaces();
-    const updatedWorkspaces = Array.isArray(result.data) ? result.data : [];
-    const matched = updatedWorkspaces.find(ws => ws.id === newWorkspace.id);
-    if (matched) {
-      setSelectedWorkspace(matched);
-    } else if (updatedWorkspaces.length > 0) {
-      setSelectedWorkspace(updatedWorkspaces[0]);
-    } else {
-      setSelectedWorkspace(null);
-    }
-
+  const handleWorkspaceCreated = (newWorkspace) => {
+    // Add new workspace to Redux state
+    dispatch(
+      workspacesActions.setWorkspaces([
+        ...workspaces,
+        newWorkspace,
+      ])
+    );
+    // Select and navigate
+    setSelectedWorkspace(newWorkspace);
     setLocation("/admin");
-  } catch (err) {
-    console.error("Failed to refetch workspaces:", err);
-    setSelectedWorkspace(null);
-  }
-  }; 
+  };
 
   return (
     <DashboardLayout>
