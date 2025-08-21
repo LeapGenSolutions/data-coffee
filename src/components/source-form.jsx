@@ -146,7 +146,7 @@ const getValidationSchema = (sourceType, location) => {
         cloudProvider: z.string().min(1, "Cloud provider is required"),
         containerName: z.string().min(1, "Container name is required"),
         fileFormat: z.string().min(1, "File format is required"),
-        pathPrefix: z.string().min(1, "Path Prefix is required"),
+        pathPrefix: z.string().optional(),
         connectionString: z.string().optional(),
         authType: z.string().optional(),
       })
