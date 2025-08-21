@@ -125,7 +125,7 @@ export default function DashboardLayout({ children }) {
                   <ul className="divide-y divide-gray-100">
                     <li className="p-4 hover:bg-gray-50 cursor-pointer">Profile</li>
                     <li className="p-4 hover:bg-gray-50 cursor-pointer">Settings</li>
-                    <li className="p-4 hover:bg-gray-50 cursor-pointer">Logout</li>
+                    {/*<li className="p-4 hover:bg-gray-50 cursor-pointer">Logout</li>*/}
                   </ul>
                 </div>
               )}
