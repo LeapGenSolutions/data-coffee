@@ -2738,7 +2738,7 @@ const confirmDelete = () => {
                           Prompt Version History
                         </div>
                         <div className="space-y-4">
-                          {promptHistory.map((prompt, idx) => (
+                          {promptHistory ? promptHistory.map((prompt, idx) => (
                             <div
                               key={prompt.title + prompt.timestamp}
                               className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-4 flex items-start gap-3"
@@ -2778,7 +2778,9 @@ const confirmDelete = () => {
                                 )}
                               </span>
                             </div>
-                          ))}
+                          )) : (
+                            <div className="text-gray-500 text-center">No prompt history available</div>
+                          )}
                         </div>
                       </div>
                     </>
