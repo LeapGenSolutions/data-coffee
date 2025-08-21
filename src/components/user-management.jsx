@@ -1,4 +1,5 @@
 /* eslint-disable */
+import React from "react";
 import { useRunPipeline } from '../hooks/useRunPipeline';
 import { useState, useRef, useEffect } from "react";
 import {
@@ -13,6 +14,10 @@ import {
   RefreshCcw,
   AlertTriangle,
   Trash2 as Trash,
+  Search,
+  FileText,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -65,6 +70,12 @@ import usePatchPipeline from '../hooks/usePatchPipeline';
 import { format } from 'date-fns';
 import { PipelineDetailsModal } from './pipeline-details-modal';
 import useDeletePipeline from "../hooks/useDeletePipeline";
+import QuickActions from "./quick-actions";
+import PipelineTemplatesGallery from "./pipeline-templates-gallery";
+import PipelineMonitoringDashboard from "./pipeline-monitoring-dashboard";
+import PipelinePerformanceDashboard from "./pipeline-performance-dashboard";
+import PipelineDependenciesDashboard from "./pipeline-dependencies-dashboard";
+import PipelineSchedulingDashboard from "./pipeline-scheduling-dashboard";
 
 
 function UserManagement() {
@@ -117,6 +128,8 @@ function UserManagement() {
   // NEW: delete-confirmation state
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pipelineToDelete, setPipelineToDelete] = useState(null);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("pipeline-table");
 
   const [selectedWorkspace, setSelectedWorkspace] = useState(() => {
     // Only set the first workspace if workspaces array exists and has items
@@ -201,6 +214,20 @@ function UserManagement() {
     }
     return 0;
   }) : [];
+
+  // Calculate pipeline statistics
+  const pipelineStats = React.useMemo(() => {
+    if (!sortedUsers || sortedUsers.length === 0) {
+      return { running: 0, stopped: 0, failed: 0, scheduled: 0 };
+    }
+    
+    return {
+      running: sortedUsers.filter(p => p.status?.toLowerCase() === 'running' || p.status?.toLowerCase() === 'active').length,
+      stopped: sortedUsers.filter(p => p.status?.toLowerCase() === 'stopped' || p.status?.toLowerCase() === 'inactive').length,
+      failed: sortedUsers.filter(p => p.status?.toLowerCase() === 'failed' || p.status?.toLowerCase() === 'error').length,
+      scheduled: sortedUsers.filter(p => p.status?.toLowerCase() === 'scheduled' || p.status?.toLowerCase() === 'pending').length
+    };
+  }, [sortedUsers]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -725,6 +752,80 @@ const confirmDelete = () => {
     });
   };
 
+  // Bulk action handlers
+  const handleStartSelected = () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: "No Pipelines Selected",
+        description: "Please select pipelines to start",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Starting Pipelines",
+      description: `Starting ${selectedUsers.length} pipeline(s)...`,
+    });
+    // TODO: Implement actual start logic
+  };
+
+  const handleStopSelected = () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: "No Pipelines Selected",
+        description: "Please select pipelines to stop",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Stopping Pipelines",
+      description: `Stopping ${selectedUsers.length} pipeline(s)...`,
+    });
+    // TODO: Implement actual stop logic
+  };
+
+  const handleExportConfig = () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: "No Pipelines Selected",
+        description: "Please select pipelines to export",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    toast({
+      title: "Exporting Configurations",
+      description: `Exporting ${selectedUsers.length} pipeline configuration(s)...`,
+    });
+    // TODO: Implement actual export logic
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedUsers.length === 0) {
+      toast({
+        title: "No Pipelines Selected",
+        description: "Please select pipelines to delete",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Show confirmation for bulk delete
+    if (window.confirm(`Are you sure you want to delete ${selectedUsers.length} pipeline(s)? This action cannot be undone.`)) {
+      selectedUsers.forEach(pipelineId => {
+        const pipeline = sortedUsers.find(p => p.id === pipelineId);
+        if (pipeline) {
+          openDeleteConfirm(pipeline);
+        }
+      });
+      setSelectedUsers([]);
+    }
+  };
+
   const handleEditPipeline = (pipeline) => {
     setIsEditing(true);
     setEditPipeline(pipeline);
@@ -803,6 +904,24 @@ const confirmDelete = () => {
 
       {/* Main Content */}
       <div className="space-y-4">
+        {/* Quick Actions Component */}
+        <QuickActions 
+          selectedPipelines={selectedUsers}
+          totalPipelines={sortedUsers.length}
+          onStartSelected={handleStartSelected}
+          onStopSelected={handleStopSelected}
+          onRefreshAll={() => {
+            refetchPipelines();
+            toast({
+              title: "Refreshing pipelines...",
+              description: "Pipeline list is being updated.",
+            });
+          }}
+          onExportConfig={handleExportConfig}
+          onDeleteSelected={handleDeleteSelected}
+          pipelineStats={pipelineStats}
+        />
+        
         {/* Section Title and Controls */}
         <div className="flex items-center justify-between gap-4">
           <h2 className="text-xl font-semibold text-gray-900">
@@ -1312,137 +1431,320 @@ const confirmDelete = () => {
           </div>
         </div>
 
-        {/* Users Table */}
-        <div className="bg-white rounded-lg border border-gray-200">
-          <Table
-            className="w-full table-fixed"
-          >
-            <TableHeader>
-              <TableRow className="bg-[#2196F3] border-blue-600">
-                <TableHead className="text-white font-medium">
-                  Pipeline Name
-                </TableHead>
-                <TableHead className="text-white font-medium">Source</TableHead>
-                <TableHead className="text-white font-medium">
-                  Destination
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Technique
-                </TableHead>
-                <TableHead className="text-white font-medium">Status</TableHead>
-                <TableHead className="text-white font-medium">
-                  Created
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Actions
-                </TableHead>
-                <TableHead className="text-white font-medium">
-                  Thought Bubble
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {pipelineLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                    Loading pipelines...
-                  </TableCell>
-                </TableRow>
-              ) : pipelineError ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-red-500 py-8">
-                    Error loading pipelines: {pipelineError.message || 'Unknown error'}
-                  </TableCell>
-                </TableRow>
-              ) : sortedUsers && sortedUsers.length > 0 ? (
-                sortedUsers.map((pipeline) => (
-                  <TableRow
-                    key={pipeline.id}
-                    className="bg-white hover:bg-gray-50 border-gray-200"
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setActiveTab("pipeline-table")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "pipeline-table"
+                  ? "bg-blue-100 text-gray-900"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Pipeline Table
+            </button>
+            <button
+              onClick={() => setActiveTab("monitoring")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "monitoring"
+                  ? "bg-blue-100 text-gray-900"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Monitoring
+            </button>
+            <button
+              onClick={() => setActiveTab("performance")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "performance"
+                  ? "bg-blue-100 text-gray-900"
+                  : "bg-gray-200 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Performance
+            </button>
+            <button
+              onClick={() => setActiveTab("dependencies")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "dependencies"
+                  ? "bg-blue-100 text-gray-900"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Dependencies
+            </button>
+            <button
+              onClick={() => setActiveTab("scheduling")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === "scheduling"
+                  ? "bg-blue-100 text-gray-900"
+                  : "bg-gray-200 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Scheduling
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "pipeline-table" && (
+          <>
+            {/* Search and Filter Bar */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="relative flex-1 max-w-md">
+                    <Input
+                      placeholder="Search pipelines..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4"
+                    />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </div>
+                  <Select value={sortField} onValueChange={setSortField}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue placeholder="Sort by..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="name">Name</SelectItem>
+                      <SelectItem value="status">Status</SelectItem>
+                      <SelectItem value="created_at">Created Date</SelectItem>
+                      <SelectItem value="last_updated">Last Updated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortDirection} onValueChange={setSortDirection}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="asc">Ascending</SelectItem>
+                      <SelectItem value="desc">Descending</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-purple-300 text-purple-600 hover:bg-purple-50"
+                    onClick={() => setShowTemplatesModal(true)}
                   >
-                    <TableCell className="font-medium text-gray-900 p-4 text-sm whitespace-nowrap overflow-hidden truncate w-40 cursor-pointer" title={pipeline.name}>
-                      {pipeline.name}
-                    </TableCell>
-                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
-                      {pipeline.source}
-                    </TableCell>
-                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
-                      {pipeline.destination}
-                    </TableCell>
-                    <TableCell className="p-4 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
-                    <TableCell className="p-4 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
-                    <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
-                      {(pipeline.last_updated) ? formatDate(pipeline.last_updated) : formatDate(pipeline.created_at)}
-                    </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Templates
+                  </Button>
+                </div>
+              </div>
+            </div>
 
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => handleEditPipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <Pencil className="h-4 w-4 text-blue-500" /> Edit
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => setViewPipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <Eye className="h-4 w-4 text-blue-500" /> View
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => handleClonePipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <Copy className="h-4 w-4 text-blue-500" /> Clone
-                        </DropdownMenuItem>
-
-                        <DropdownMenuItem
-                          onClick={() => handleRunPipeline(pipeline)}
-                          className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
-                        >
-                          <RefreshCcw className="h-4 w-4 text-blue-500" /> Run Manually
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => openDeleteConfirm(pipeline)}
-                          className="text-red-600 hover:bg-gray-100"
-                        >
-                          <Trash className="h-4 w-4 text-red-500" /> Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    </TableCell>
-                    <TableCell className="whitespace-normal p-4 min-w-[100px] max-w-[140px] text-sm flex justify-center items-center">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-2 font-semibold text-gray-900 border-gray-300 hover:border-blue-400 hover:bg-blue-50 px-2 py-1 text-sm"
-                        onClick={() => {
-                          setPromptPipeline(pipeline);
-                          setShowPromptListModal(true);
+            {/* Users Table */}
+            <div className="bg-white rounded-lg border border-gray-200">
+              <Table
+                className="w-full table-fixed"
+              >
+                <TableHeader>
+                  <TableRow className="bg-[#2196F3] border-blue-600">
+                    <TableHead className="text-white font-medium w-12">
+                      <Checkbox
+                        checked={selectedUsers.length === sortedUsers.length && sortedUsers.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedUsers(sortedUsers.map(p => p.id));
+                          } else {
+                            setSelectedUsers([]);
+                          }
                         }}
-                      >
-                        <Sparkles className="h-4 w-4 text-purple-500" />
-                      </Button>
-                    </TableCell>
+                      />
+                    </TableHead>
+                    <TableHead className="text-white font-medium">
+                      Pipeline Name
+                    </TableHead>
+                    <TableHead className="text-white font-medium">Source</TableHead>
+                    <TableHead className="text-white font-medium">
+                      Destination
+                    </TableHead>
+                    <TableHead className="text-white font-medium">
+                      Technique
+                    </TableHead>
+                    <TableHead className="text-white font-medium">Status</TableHead>
+                    <TableHead className="text-white font-medium">
+                      Created
+                    </TableHead>
+                    <TableHead className="text-white font-medium">
+                      Last Run
+                    </TableHead>
+                    <TableHead className="text-white font-medium">
+                      Actions
+                    </TableHead>
+                    <TableHead className="text-white font-medium">
+                      Thought Bubble
+                    </TableHead>
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center text-gray-500 py-8">
-                    No pipelines found for the selected workspace.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                </TableHeader>
+                <TableBody>
+                  {pipelineLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                        Loading pipelines...
+                      </TableCell>
+                    </TableRow>
+                  ) : pipelineError ? (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-red-500 py-8">
+                        Error loading pipelines: {pipelineError.message || 'Unknown error'}
+                      </TableCell>
+                    </TableRow>
+                  ) : sortedUsers && sortedUsers.length > 0 ? (
+                    sortedUsers.map((pipeline) => (
+                      <TableRow
+                        key={pipeline.id}
+                        className="bg-white hover:bg-gray-50 border-gray-200"
+                      >
+                        <TableCell className="w-12 p-4">
+                          <Checkbox
+                            checked={selectedUsers.includes(pipeline.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedUsers([...selectedUsers, pipeline.id]);
+                              } else {
+                                setSelectedUsers(selectedUsers.filter(id => id !== pipeline.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-gray-900 p-4 text-sm whitespace-nowrap overflow-hidden truncate w-40 cursor-pointer" title={pipeline.name}>
+                          {pipeline.name}
+                        </TableCell>
+                        <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
+                          {pipeline.source}
+                        </TableCell>
+                        <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
+                          {pipeline.destination}
+                        </TableCell>
+                        <TableCell className="p-4 text-sm whitespace-normal">{getTechniqueBadge(pipeline.technique)}</TableCell>
+                        <TableCell className="p-4 text-sm whitespace-normal">{getStatusBadge(pipeline.status)}</TableCell>
+                        <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
+                          {(pipeline.last_updated) ? formatDate(pipeline.last_updated) : formatDate(pipeline.created_at)}
+                        </TableCell>
+                        <TableCell className="text-gray-600 p-4 text-sm whitespace-normal">
+                          {pipeline.last_run ? (
+                            <div className="flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span>{formatDate(pipeline.last_run)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Never</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => handleEditPipeline(pipeline)}
+                              className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleViewPipeline(pipeline)}
+                              className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                            >
+                              <Eye className="h-4 w-4" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleClonePipeline(pipeline)}
+                              className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-100 text-gray-700"
+                            >
+                              <Copy className="h-4 w-4" />
+                              Clone
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeletePipeline(pipeline)}
+                              className="flex items-center gap-2 cursor-pointer hover:bg-red-50 focus:bg-red-100 text-red-700"
+                            >
+                              <Trash className="h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePromptClick(pipeline)}
+                            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                          >
+                            <Sparkles className="h-4 w-4 mr-1" />
+                            Prompt
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={9} className="text-center text-gray-500 py-8">
+                        No pipelines found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
+
+        {activeTab === "monitoring" && (
+          <PipelineMonitoringDashboard />
+        )}
+
+        {activeTab === "performance" && (
+          <PipelinePerformanceDashboard />
+        )}
+
+        {activeTab === "dependencies" && (
+          <PipelineDependenciesDashboard />
+        )}
+
+        {activeTab === "scheduling" && (
+          <PipelineSchedulingDashboard />
+        )}
+
+        {/* Pagination */}
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Showing {sortedUsers.length} of {sortedUsers.length} pipelines
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={true}
+                className="px-3 py-1"
+              >
+                Previous
+              </Button>
+              <span className="px-3 py-1 text-sm text-gray-700">Page 1 of 1</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={true}
+                className="px-3 py-1"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       {!isApplyingPrompt && !showSuccessTransition && (
@@ -1717,6 +2019,19 @@ const confirmDelete = () => {
           )}
         </>
       )}
+
+      {/* Pipeline Templates Modal */}
+      <PipelineTemplatesGallery
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+        onTemplateSelect={(template) => {
+          // Handle template selection - could pre-fill the create pipeline form
+          toast({
+            title: "Template Selected",
+            description: `Template "${template.name}" selected. You can now create a pipeline from it.`,
+          });
+        }}
+      />
     </div>
   );
 }
