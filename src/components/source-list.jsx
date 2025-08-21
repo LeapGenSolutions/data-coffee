@@ -283,7 +283,7 @@ export default function SourceList({
                     </TableCell>
                     <TableCell className="font-medium text-[#2196F3]">{source?.configuration?.sourceName || "Unnamed"}</TableCell>
                     <TableCell className="text-gray-600">{source?.configuration?.sourceType || "N/A"}</TableCell>
-                    <TableCell className="text-gray-600">{source.location || 'N/A'}</TableCell>
+                    <TableCell className="text-gray-600">{source?.configuration?.location || 'N/A'}</TableCell>
                     <TableCell className="text-gray-600">{source.configuration?.authType || source.configuration?.authMethod || 'N/A'}</TableCell>
                     <TableCell>{getStatusBadge(source.status?.toLowerCase() || 'active')}</TableCell>
                     <TableCell>
