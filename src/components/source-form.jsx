@@ -45,7 +45,7 @@ import { useFetchSourceTypes } from "../hooks/useFetchSourceTypes";
 import { useSelector } from "react-redux";
 import { navigate } from "wouter/use-browser-location";
 import { cn } from "../lib/utils";
-import { useTestAzureBlobConnection } from "../hooks/useTestAzureBlobConnection";
+
 
 // Define basic schema and schemas for each source type and location
 const baseSchema = z.object({
@@ -220,7 +220,6 @@ export function SourceForm({ mode = "add", initialSource,
   const [, setErrors] = useState({});
   // Data fetching hooks
   const { data: sourceTypes, isLoading, error } = useFetchSourceTypes();
-  const testAzureBlobConnection = useTestAzureBlobConnection();
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
   const [location, setLocation] = useState("on-prem");
@@ -1163,24 +1162,7 @@ export function SourceForm({ mode = "add", initialSource,
         ];
       }
 
-      // Render the Test Connection button for Azure Blob Storage
-      const renderTestConnectionButton = () => {
-        if (isAzure && currentSourceType === "files") {
-          return (
-            <div className="flex justify-end mt-2">
-              <button
-                type="button"
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                onClick={handleTestConnection}
-                disabled={testAzureBlobConnection.isLoading}
-              >
-                {testAzureBlobConnection.isLoading ? "Testing..." : "Test Connection"}
-              </button>
-            </div>
-          );
-        }
-        return null;
-      };
+      
 
       return (
         <div className="space-y-6">
@@ -1189,61 +1171,11 @@ export function SourceForm({ mode = "add", initialSource,
             <p className="text-sm text-gray-600">
               Configure access to your file storage system
             </p>
-          </div>
-          {renderCommonFields(fields)}
-          {renderTestConnectionButton()}
-        </div>
+                     </div>
+           {renderCommonFields(fields)}
+         </div>
       );
-      // Move handleTestConnection to the bottom of the component so it can be referenced anywhere
-      function handleTestConnection() {
-        const currentSourceType = form.getValues("sourceType");
-        const currentLocation = form.getValues("location");
-        const isAzure = currentLocation === "cloud" && form.getValues("cloudProvider") === "azure";
-
-        if (isAzure && currentSourceType === "files") {
-          const connectionString = form.getValues("connectionString");
-          const containerName = form.getValues("containerName");
-
-          const newErrors = {};
-          if (!containerName) newErrors.containerName = "Container Name is required";
-          if (!connectionString) newErrors.connectionString = "Azure Connection String is required";
-
-          if (Object.keys(newErrors).length > 0) {
-            setErrors(newErrors);
-            return;
-          }
-
-          setErrors({}); // Clear errors if all good
-
-          testAzureBlobConnection.mutate(
-            { connectionString, containerName },
-            {
-              onSuccess: (data) => {
-                if (data.success) {
-                  toast({
-                    title: "Connection Successful",
-                    description: data.message || "Connected to Azure Blob Storage!",
-                    variant: "success",
-                  });
-                } else {
-                  toast({
-                    title: "Connection Failed",
-                    description: data.message || "Could not connect.",
-                    variant: "destructive",
-                  });
-                }
-              },
-              onError: (error) => {
-                toast({
-                  title: "Connection Failed",
-                  description: error?.response?.data?.message || error.message || "Could not connect.",
-                  variant: "destructive",
-                });
-              },
-            }
-          );
-        }
-      }
+      
     }
 
     // REST API Configuration
