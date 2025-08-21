@@ -1,10 +1,10 @@
 import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
-import { apiRequest } from '../../lib/queryClient.js';
 import { toast } from '../components/ui/toaster.jsx';
 import Logo from '../components/alien-logo.jsx';
 import { BarChart3, Database, FileText, Activity, LogOut, Settings } from 'lucide-react';
+import { authService } from "../lib/auth";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
@@ -13,7 +13,9 @@ export default function Dashboard() {
   // Check if user is authenticated
   const { data: authData, isLoading: authLoading } = useQuery({
     queryKey: ['/api/auth/me'],
+    queryFn: authService.getCurrentUser,
     retry: false,
+    refetchOnMount: true
   });
 
   // Fetch dashboard stats
@@ -22,28 +24,34 @@ export default function Dashboard() {
     enabled: !!authData?.user,
   });
 
-  const logoutMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest('/api/auth/logout', {
-        method: 'POST'
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: "Logged out successfully",
-      });
-      queryClient.clear();
-      setLocation('/');
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Logout failed",
-        variant: "destructive",
-      });
-    }
-  });
+const logoutMutation = useMutation({
+  mutationFn: async () => {
+    await authService.logout();
+
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    sessionStorage.clear();
+  },
+  onSuccess: () => {
+    toast({ 
+      title: "Success", 
+      description: "Logged out successfully", 
+    });
+
+    queryClient.removeQueries(['/api/auth/me']); // force React Query to refetch
+    queryClient.clear();
+
+    window.location.replace("/");
+  },
+  onError: (error) => {
+    toast({
+      title: "Error",
+      description: error?.message || "Logout failed",
+      variant: "destructive",
+    });
+  }
+});
 
   // Redirect to login if not authenticated
   if (!authLoading && !authData?.user) {

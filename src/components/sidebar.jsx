@@ -1,7 +1,14 @@
+import React from "react";
 import { useLocation } from "wouter";
+import { useSelector } from "react-redux";
+import { useLocation as useWouterLocation } from "wouter";
+import { useMsal } from "@azure/msal-react";
+
 import { cn } from "../lib/utils";
 import { Button } from "../components/ui/button";
 import Logo from "../components/alien-logo";
+import SidebarNav from "./SidebarNav";
+
 import {
   Home,
   Settings,
@@ -10,10 +17,6 @@ import {
   LogOut,
   X
 } from "lucide-react";
-
-import { useSelector } from "react-redux";
-import { useLocation as useWouterLocation } from "wouter";
-import SidebarNav from "./SidebarNav";
 
 const navigationBase = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
@@ -28,10 +31,11 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
   const [, wouterNavigate] = useWouterLocation();
   const user = useSelector((state) => state.me.me);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
+  const { instance } = useMsal();
 
   const handleLogout = () => {
     localStorage.removeItem('isAuthenticated');
-    window.location.href = '/';
+    instance.logoutRedirect();      
   };
 
   const navigation = navigationBase.filter(item => {
@@ -51,9 +55,9 @@ export function Sidebar({ isMobileOpen = false, onMobileClose }) {
 
       <div className="flex">
         <div className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-white via-gray-50 to-gray-100 border-r border-gray-200 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
-          isMobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}>
+            "fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-white via-gray-50 to-gray-100 border-r border-gray-200 shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
+            isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          )}>
           <div className="flex flex-col h-full">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-white shadow-sm">
               <div className="flex items-center gap-3">
