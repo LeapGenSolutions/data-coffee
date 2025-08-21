@@ -2664,7 +2664,7 @@ const confirmDelete = () => {
               </DialogHeader>
               {promptPipeline &&
                 (() => {
-                  const { surroundAIPrompt, suggestedPrompt, promptHistory } =
+                  const { surroundAIPrompt, suggestedPrompt} =
                     getPipelinePrompts(promptPipeline);
                   return (
                     <>
@@ -2738,9 +2738,9 @@ const confirmDelete = () => {
                           Prompt Version History
                         </div>
                         <div className="space-y-4">
-                          {promptHistory.map((prompt, idx) => (
+                          {promptHistory && promptHistory.length > 0 ? promptHistory.map((prompt, idx) => (
                             <div
-                              key={prompt.title + prompt.timestamp}
+                              key={prompt.id}
                               className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-4 flex items-start gap-3"
                             >
                               <span className="flex-shrink-0 bg-purple-100 rounded-full p-2 flex items-center justify-center">
@@ -2748,13 +2748,10 @@ const confirmDelete = () => {
                               </span>
                               <span className="flex-1">
                                 <div className="font-semibold text-gray-900 text-base mb-1">
-                                  {prompt.title}
-                                </div>
-                                <div className="text-sm text-gray-600 mb-2">
-                                  {prompt.description}
+                                  {prompt.generated_prompt}
                                 </div>
                                 <div className="text-xs text-gray-400 mb-2">
-                                  {prompt.timestamp}
+                                  {prompt.generated_at}
                                 </div>
                                 {pipelinePrompts[promptPipeline?.id]
                                   ?.content === prompt.content ? (
@@ -2778,7 +2775,11 @@ const confirmDelete = () => {
                                 )}
                               </span>
                             </div>
-                          ))}
+                          )) : (
+                            <div className="text-gray-500 text-center">
+                              No prompt version history available.
+                            </div>
+                          )}
                         </div>
                       </div>
                     </>
