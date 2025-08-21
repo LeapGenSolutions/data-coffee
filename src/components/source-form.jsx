@@ -34,7 +34,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import {
   ChevronRight,
   Database,
-  Server,
   Globe,
   CheckCircle,
 } from "lucide-react";
@@ -223,7 +222,7 @@ export function SourceForm({ mode = "add", initialSource,
   const testAzureBlobConnection = useTestAzureBlobConnection();
   const [step, setStep] = useState(1);
   const [sourceType, setSourceType] = useState("");
-  const [location, setLocation] = useState("on-prem");
+  const [location, setLocation] = useState("cloud");
   const [sourceStatus, setSourceStatus] = useState("Active");
   const user = useSelector((state) => state.me.me);
 
@@ -237,7 +236,7 @@ export function SourceForm({ mode = "add", initialSource,
       step: 1,
       sourceName: "",
       sourceType: "",
-      location: "on-prem",
+      location: "cloud",
 
     },
   });
@@ -289,7 +288,7 @@ export function SourceForm({ mode = "add", initialSource,
       id: Date.now(),
       name: currentData.sourceName || "Untitled Source",
       type: currentData.sourceType || "unknown",
-      location: location || currentData.location || "on-prem",
+      location: location || currentData.location || "cloud",
       authType: currentData.authType || "",
 
       configuration: currentData,
@@ -367,26 +366,7 @@ export function SourceForm({ mode = "add", initialSource,
     form.reset(newValues);
   };
 
-  // Update form state when location changes
-  const handleLocationChange = (value) => {
-    setLocation(value);
-    form.setValue("location", value);
 
-    // Always reset to step 1 when changing location
-    setStep(1);
-    form.setValue("step", 1);
-
-    const currentValues = form.getValues();
-    const newValues = {
-      step: 1,
-      sourceName: currentValues.sourceName,
-      sourceType: currentValues.sourceType,
-      location: value,
-
-    };
-
-    form.reset(newValues);
-  };
 
   // Handle form submission
   const onSubmit = (data) => {
@@ -398,7 +378,7 @@ export function SourceForm({ mode = "add", initialSource,
       id: Date.now(), // Simple ID generation
       name: data.sourceName || "Untitled Source",
       type: data.sourceType || "unknown",
-      location: location || data.location || "on-prem",
+      location: location || data.location || "cloud",
       configuration: data, // Data Selection removed
       status: "Active",
       lastSync: new Date().toISOString(),
@@ -1643,47 +1623,18 @@ export function SourceForm({ mode = "add", initialSource,
               />
             </div>
 
-            <div className="space-y-4">
+                        <div className="space-y-4">
               <FormLabel>Source Location</FormLabel>
-              <Tabs
-                defaultValue="on-prem"
-                value={location}
-                className="w-full"
-                onValueChange={handleLocationChange}
-              >
-                <TabsList className="grid w-full grid-cols-2 bg-white border-gray-200">
-                  <TabsTrigger
-                    value="on-prem"
-                    className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-[#2196F3] text-gray-600"
-                  >
-                    <Server className="h-4 w-4" />
-                    On-Premises
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="cloud"
-                    className="flex items-center gap-2 data-[state=active]:bg-blue-50 data-[state=active]:text-[#2196F3] text-gray-600"
-                  >
-                    <Globe className="h-4 w-4" />
-                    Cloud
-                  </TabsTrigger>
-                </TabsList>
-                <TabsContent value="on-prem" className="mt-4">
-                  <div className="bg-blue-50 p-4 rounded-md border border-gray-200">
-                    <p className="text-sm text-gray-600">
-                      Connect to data sources hosted in your local
-                      infrastructure or private cloud.
-                    </p>
-                  </div>
-                </TabsContent>
-                <TabsContent value="cloud" className="mt-4">
-                  <div className="bg-blue-50 p-4 rounded-md border border-gray-200">
-                    <p className="text-sm text-gray-600">
-                      Connect to cloud-hosted data sources like AWS RDS, Azure
-                      SQL, or Google Cloud SQL.
-                    </p>
-                  </div>
-                </TabsContent>
-              </Tabs>
+              <div className="bg-blue-50 p-4 rounded-md border border-gray-200">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-[#2196F3]" />
+                  <span className="text-sm font-medium text-gray-900">Cloud</span>
+                </div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Connect to cloud-hosted data sources like AWS RDS, Azure
+                  SQL, or Google Cloud SQL.
+                </p>
+              </div>
             </div>
           </div>
         );
