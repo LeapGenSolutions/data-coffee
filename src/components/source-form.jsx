@@ -212,6 +212,41 @@ const getValidationSchema = (sourceType, location) => {
     });
   }
 
+    if (sourceType === "sharepoint" && location === "cloud") {
+    return schema
+      .extend({
+        tenantId: z.string().min(1, "Tenant ID is required"),
+        clientId: z.string().min(1, "Client ID is required"),
+        authType: z.enum(["basic", "keyvault"], {
+          required_error: "Authentication type is required",
+        }),
+        containerName: z.string().default("octopus-documents"),
+        sharepointHost: z.string().min(1, "SharePoint host is required"),
+        sharepointPath: z.string().min(1, "SharePoint path is required"),
+        sharepointFolder: z.string().min(1, "SharePoint folder is required"),
+        clientSecret: z.string().optional(),
+        secretName: z.string().optional(),
+        fileFormat: z.string().min(1, "File format is required"),
+      })
+      .superRefine((data, ctx) => {
+      if (data.authType === "basic" && (!data.clientSecret || data.clientSecret.trim() === "")) {
+        ctx.addIssue({
+          path: ["clientSecret"],
+          message: "Client Secret is required when authType is Basic",
+          code: z.ZodIssueCode.custom,
+        });
+      }
+
+      if (data.authType === "keyvault" && (!data.secretName || data.secretName.trim() === "")) {
+        ctx.addIssue({
+          path: ["secretName"],
+          message: "Secret Name is required when authType is Key Vault",
+          code: z.ZodIssueCode.custom,
+        });
+      }
+    });
+  }
+
   return schema;
 };
 
@@ -281,6 +316,9 @@ export function SourceForm({ mode = "add", initialSource,
 
   function handleSaveSource() {
     const currentData = form.getValues();
+    if (currentData.sourceType === "sharepoint") {
+    currentData.containerName = "octopus-documents";
+  }
     console.log("Saving source with data:", currentData);
 
     // Create a new source object with all the form data
@@ -537,7 +575,7 @@ export function SourceForm({ mode = "add", initialSource,
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fields.map((field, index) => (
           <FormField
-            key={index}
+            key={field.name}
             control={form.control}
             name={field.name}
             render={({ field: formField, fieldState }) => (
@@ -1518,6 +1556,147 @@ export function SourceForm({ mode = "add", initialSource,
               {currentLocation === "on-prem"
                 ? "Configure connection to your on-premises data warehouse"
                 : "Configure connection to your cloud data warehouse with enterprise security"}
+            </p>
+          </div>
+          {renderCommonFields(fields)}
+        </div>
+      );
+    }
+
+    // SharePoint Configuration
+    if (normalizedSourceType === "sharepoint") {
+      const authType = form.watch("authType");
+      let fields = [];
+
+      const fileFormatField = {
+    name: "fileFormat",
+    label: "File Format",
+    type: "select",
+    placeholder: "Select file format",
+    options: [
+      { value: "all", label: "All" },
+      { value: "csv", label: "CSV" },
+      { value: "json", label: "JSON" },
+      { value: "png", label: "PNG" },
+      { value: "jpeg", label: "JPEG" },
+      { value: "pdf", label: "PDF" },
+      { value: "jpg", label: "JPG" },
+    ],
+  };
+
+      if (currentLocation === "on-prem") {
+        fields = [
+          {
+            name: "tenantId",
+            label: "Tenant ID",
+            placeholder: "Enter Tenant ID",
+          },
+          {  
+            name: "clientId",
+            label: "Client ID",
+            placeholder: "Enter Client ID",
+          },
+          {
+            name: "authType",
+            label: "Authentication Type",
+            type: "select",
+            placeholder: "Select authentication type",
+            options: [
+             { value: "basic", label: "Basic" },
+              { value: "keyvault", label: "Key Vault" },
+            ],
+          },
+          ...(authType === "basic"
+          ? [{
+              name: "clientSecret",
+              label: "Client Secret",
+              placeholder: "Enter Client Secret",
+            }]
+          : authType === "keyvault"
+          ? [{
+              name: "secretName",
+              label: "Secret Name",
+              placeholder: "Enter Secret Name in Key Vault",
+            }]
+          : []),
+          {
+            name: "sharepointHost",
+            label: "SharePoint Host",
+            placeholder: "https://yourcompany.sharepoint.com",
+          },
+          {
+            name: "sharepointPath",
+            label: "SharePoint Path",
+            placeholder: "/sites/your-site-name",
+          },
+          {
+            name: "sharepointFolder",
+            label: "SharePoint Folder",
+            placeholder: "/Documents/Shared Folder",
+          },
+          fileFormatField,
+          ];
+      } else {
+        fields = [
+          {
+            name: "tenantId",
+            label: "Tenant ID",
+            placeholder: "Enter Tenant ID",
+          },
+          {
+            name: "clientId",
+            label: "Client ID",
+            placeholder: "Enter Client ID",
+          },
+          {
+            name: "authType",
+            label: "Authentication Type",
+            type: "select",
+            placeholder: "Select authentication type",
+            options: [
+              { value: "basic", label: "Basic" },
+              { value: "keyvault", label: "Key Vault" },
+            ],
+          },
+          // Conditionally show fields
+          ...(authType === "basic"
+            ? [{
+              name: "clientSecret",
+              label: "Client Secret",
+              placeholder: "Enter Client Secret",
+            }]
+            : authType === "keyvault"
+            ? [{
+              name: "secretName",
+              label: "Secret Name",
+              placeholder: "Enter Secret Name in Key Vault",
+            }]
+          : []),
+          {
+            name: "sharepointHost",
+            label: "SharePoint Host",
+            placeholder: "https://yourcompany.sharepoint.com",
+          },
+          {
+            name: "sharepointPath",
+            label: "SharePoint Path",
+            placeholder: "/sites/your-site-name",
+          },
+          {
+            name: "sharepointFolder",
+            label: "SharePoint Folder",
+            placeholder: "/Documents/Shared Folder",
+          },
+          fileFormatField,
+        ];
+      }
+
+      return (
+        <div className="space-y-6">
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <h3 className="font-medium text-gray-900 mb-2">SharePoint Configuration</h3>
+            <p className="text-sm text-gray-600">
+            Configure access to your SharePoint data source
             </p>
           </div>
           {renderCommonFields(fields)}
