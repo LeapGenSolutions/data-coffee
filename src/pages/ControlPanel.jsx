@@ -73,9 +73,18 @@ export default function ControlPanel() {
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [pipelineToDelete, setPipelineToDelete] = useState(null);
+  
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // your hook (we try this for pipeline deletion mode)
   const { mutate: deleteRunHistory, isPending: isDeleting } = useDeletePipelineHistory();
+  
+  const filteredPipelines = (pipelineHistory || []).filter(item => {
+  const matchesSearch = item.pipeline_name?.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = statusFilter === "all" || item.pipeline_status === statusFilter;
+  return matchesSearch && matchesStatus;
+});
 
 
   // ---- WS (unchanged) ----
@@ -207,31 +216,51 @@ const confirmDelete = () => {
               <CardContent className="space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <Input
-                      placeholder="Search pipelines..."
-                      className="w-[240px] h-10 text-sm border border-gray-300 rounded-md placeholder:text-gray-500 focus:ring-2 focus:ring-[#2196F3] bg-white text-black !bg-white !text-black dark:!bg-white dark:!text-black" />
-                    <Select>
-                      <SelectTrigger className="w-[160px] h-10 text-sm border border-[#2196F3] text-[#2196F3] rounded-md">
-                        <SelectValue placeholder="All Statuses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="success">Success</SelectItem>
-                        <SelectItem value="running">Running</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
-                      </SelectContent>
-                    </Select>
+               <Input
+                placeholder="Search pipelines..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-[240px] h-10 text-sm border border-gray-300 rounded-md placeholder:text-gray-500 focus:ring-2 focus:ring-[#2196F3] bg-white text-black"
+              />
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[160px] h-10 text-sm border border-[#2196F3] text-[#2196F3] rounded-md">
+                      <SelectValue placeholder="All Statuses" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="success">Success</SelectItem>
+                      <SelectItem value="running">Running</SelectItem>
+                      <SelectItem value="failed">Failed</SelectItem>
+                    </SelectContent>
+                  </Select>
+
                   </div>
 
-                  <Button
-                    variant="outline"
-                    className="h-10 px-4 border border-[#D6BFAA] text-[#8B5E3C] rounded-md flex items-center gap-2"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L16 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 0110 17v-4.586L3.293 6.707A1 1 0 013 6V4z" />
-                    </svg>
-                    Clear Filters
-                  </Button>
+                 <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("");
+                  setStatusFilter("all");
+                }}
+                className="h-10 px-4 border border-[#D6BFAA] text-[#8B5E3C] rounded-md flex items-center gap-2"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="w-4 h-4 stroke-current"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L16 12.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 0110 17v-4.586L3.293 6.707A1 1 0 013 6V4z"
+                  />
+                </svg>
+                Clear Filters
+              </Button>
+
                 </div>
 
                 <div className="overflow-auto rounded-md border border-gray-200">
@@ -251,7 +280,7 @@ const confirmDelete = () => {
                           <td colSpan={5} className="p-6 text-center text-gray-500">No pipelines ran yet.</td>
                         </tr>
                       ) : (
-                        pipelineHistory.map((item, idx) => (
+                        filteredPipelines.map((item, idx) => (
                           <tr key={idx} className="border-t hover:bg-blue-50 transition-colors">
                             <td className="p-3 text-gray-800">{item.pipeline_name}</td>
                             <td className="p-3 text-gray-800">{formatDateTime(item.pipeline_start_time)}</td>
