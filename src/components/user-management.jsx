@@ -54,6 +54,7 @@ import {
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
 import SurroundAIWidget from './surroundAI-widget';
+import PromptStudioWidget from './prompt-studio-widget';
 import { CSSTransition } from 'react-transition-group';
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
@@ -116,6 +117,7 @@ function UserManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
   const [showSurroundAI, setShowSurroundAI] = useState(false);
+  const [showPromptStudio, setShowPromptStudio] = useState(false);
   const [pipelineForWidget, setPipelineForWidget] = useState(null);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
@@ -695,6 +697,12 @@ const handleBack = () => {
     setShowPromptListModal(false);
   };
 
+  const handleOpenPromptStudio = (pipeline) => {
+    setShowPromptStudio(true);
+    setPipelineForWidget(pipeline);
+    setShowPromptListModal(false);
+  };
+
  const handleTechniqueToggle = (technique) => {
   setSelectedTechniques((prev) => {
     const updated = prev.includes(technique)
@@ -807,6 +815,12 @@ const confirmDelete = () => {
       suggestedPrompt: {
         title: "Enhance Data Quality",
         description: "Improve data validation and cleansing processes to assure high-quality analytics.",
+        content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
+        timestamp: "2024-07-01 10:00",
+      },
+      promptStudioPrompt: {
+        title: "Enhance Using Prompt Studio",
+        description: "Improve data validation and cleansing processes Using Prompt Studio.",
         content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
         timestamp: "2024-07-01 10:00",
       },
@@ -2664,7 +2678,7 @@ const confirmDelete = () => {
               </DialogHeader>
               {promptPipeline &&
                 (() => {
-                  const { surroundAIPrompt, suggestedPrompt, promptHistory } =
+                  const { surroundAIPrompt, suggestedPrompt, promptStudioPrompt } =
                     getPipelinePrompts(promptPipeline);
                   return (
                     <>
@@ -2708,6 +2722,27 @@ const confirmDelete = () => {
                           </span>
                         </div>
 
+                        <div className="bg-blue-50 rounded-lg border border-blue-200 shadow p-5 flex items-start gap-4 mb-4">
+                          <span className="flex-shrink-0 bg-purple-100 rounded-full p-3 flex items-center justify-center">
+                            <Sparkles className="h-6 w-6 text-purple-500" />
+                          </span>
+                          <span className="flex-1">
+                            <div className="font-bold text-gray-900 text-lg mb-1">
+                              {promptStudioPrompt.title}
+                            </div>
+                            <div className="text-sm text-gray-700 mb-3">
+                              {promptStudioPrompt.description}
+                            </div>
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
+                              onClick={() => handleOpenPromptStudio(promptPipeline)}
+                            >
+                              Open Prompt Studio
+                            </Button>
+                          </span>
+                        </div>
+
                         <div className="bg-blue-50 rounded-lg border border-blue-200 shadow p-5 flex items-start gap-4">
                           <span className="flex-shrink-0 bg-purple-100 rounded-full p-3 flex items-center justify-center">
                             <Sparkles className="h-6 w-6 text-purple-500" />
@@ -2738,35 +2773,32 @@ const confirmDelete = () => {
                           Prompt Version History
                         </div>
                         <div className="space-y-4">
-                          {promptHistory.map((prompt, idx) => (
-                            <div
-                              key={prompt.title + prompt.timestamp}
-                              className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-4 flex items-start gap-3"
-                            >
-                              <span className="flex-shrink-0 bg-purple-100 rounded-full p-2 flex items-center justify-center">
-                                <Sparkles className="h-5 w-5 text-purple-500" />
-                              </span>
-                              <span className="flex-1">
-                                <div className="font-semibold text-gray-900 text-base mb-1">
-                                  {prompt.title}
-                                </div>
-                                <div className="text-sm text-gray-600 mb-2">
-                                  {prompt.description}
-                                </div>
-                                <div className="text-xs text-gray-400 mb-2">
-                                  {prompt.timestamp}
-                                </div>
-                                {pipelinePrompts[promptPipeline?.id]
-                                  ?.content === prompt.content ? (
-                                  <span className="ml-2 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">
-                                    Currently in use
-                                  </span>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="mt-1 border-blue-500 text-blue-700 hover:bg-blue-50"
-                                    onClick={() => {
+                          {promptHistory && Array.isArray(promptHistory) && promptHistory.length > 0 ? (
+                            promptHistory.map((prompt, idx) => (
+                              <div
+                                key={prompt.id}
+                                className="bg-gray-50 rounded-lg border border-gray-200 shadow-sm p-4 flex items-start gap-3"
+                              >
+                                <span className="flex-shrink-0 bg-purple-100 rounded-full p-2 flex items-center justify-center">
+                                  <Sparkles className="h-5 w-5 text-purple-500" />
+                                </span>
+                                <span className="flex-1">
+                                  <div className="font-semibold text-gray-900 text-base mb-1">
+                                    {prompt.generated_prompt}
+                                  </div>
+                                  <div className="text-xs text-gray-400 mb-2">
+                                    {prompt.generated_at}
+                                  </div>
+                                  {pipelinePrompts[promptPipeline?.id]?.content === prompt.content ? (
+                                    <span className="ml-2 bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">
+                                      Currently in use
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="mt-1 border-blue-500 text-blue-700 hover:bg-blue-50"
+                                      onClick={() => {
                                       setReviewPromptContent(prompt.content);
                                       setReviewPromptPipeline(promptPipeline);
                                       setShowPromptReviewModal(true);
@@ -2778,7 +2810,9 @@ const confirmDelete = () => {
                                 )}
                               </span>
                             </div>
-                          ))}
+                          ))) : (
+                            <div className="text-gray-500 text-center">No prompt history available</div>
+                          )}
                         </div>
                       </div>
                     </>
@@ -2922,6 +2956,9 @@ const confirmDelete = () => {
           </Dialog>
           {showSurroundAI && pipelineForWidget && (
             <SurroundAIWidget pipeline={pipelineForWidget} onClose={() => setShowSurroundAI(false)} />
+          )}
+          {showPromptStudio && (
+            <PromptStudioWidget pipeline={pipelineForWidget} onClose={() => setShowPromptStudio(false)} />
           )}
         </>
       )}
