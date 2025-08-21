@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -24,8 +24,8 @@ import {
 } from "lucide-react";
 import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
-import useFetchSources from "../hooks/useFetchSources";
 import useFetchPipelineHistory from "../hooks/useFetchPipelineHistory";
+import { BACKEND_URL } from "../constants";
 
 export default function Home() {
 
@@ -33,23 +33,88 @@ export default function Home() {
   const [showSources, setShowSources] = useState(false);
 
   const user = useSelector((state) => state.me.me);
+  const userEmail = user?.email;
 
-  const workspaceID = useSelector(
-    (state) => state.workspaces?.workspaces?.[0]?.id
-  );
-  const { sources = [], isLoading: sourcesLoading } = useFetchSources(workspaceID);
+  const [allSources, setAllSources] = useState([]);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
+  const [workspaces, setWorkspaces] = useState([]);
+  useEffect(() => {
+    const fetchWorkspaces = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/workspaces/owner/${userEmail}`);
+        const data = await res.json();
+        setWorkspaces(data || []);
+      } catch (err) {
+        console.error("Error fetching workspaces:", err);
+      }
+    };
+
+    if (userEmail) {
+      fetchWorkspaces();
+    }
+  }, [userEmail]);
+
+  useEffect(() => {
+    const fetchAllSources = async () => {
+      setSourcesLoading(true);
+      const combined = [];
+
+      for (const ws of workspaces) {
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/source/${userEmail}/workspace/${ws.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            combined.push(...data);
+          }
+        } catch (err) {
+          console.error(`Failed fetching sources for workspace ${ws.id}`, err);
+        }
+      }
+
+      setAllSources(combined);
+      setSourcesLoading(false);
+    };
+
+    if (workspaces.length > 0 && userEmail) {
+      fetchAllSources();
+    }
+  }, [workspaces, userEmail]);
 
   const dynamicSourceData = useMemo(() => {
-    const typeCounts = sources.reduce((acc, source) => {
+    const typeCounts = {};
+
+    allSources.forEach((source) => {
       const type = source?.configuration?.sourceType ?? "Unknown";
-      acc[type] = (acc[type] || 0) + 1;
-      return acc;
-    }, {});
-    return Object.entries(typeCounts).map(([type, count]) => ({
-      source: type,
+      const workspace = source?.workspaceName ?? "Unknown Workspace";
+      const key = `${workspace}: ${type}`;
+
+      typeCounts[key] = (typeCounts[key] || 0) + 1;
+    });
+
+    return Object.entries(typeCounts).map(([label, count]) => ({
+      source: label,
       value: count,
     }));
-  }, [sources]);
+  }, [allSources]);
+
+  const { groupedData } = useMemo(() => {
+    const rows = new Map();   // workspace -> { workspace, [type]: count }
+    const types = new Set();
+
+    dynamicSourceData.forEach((d) => {
+      const label = d.source || "";
+      const idx = label.lastIndexOf(":");
+      const workspace = (idx !== -1 ? label.slice(0, idx) : label).trim();
+      const type = (idx !== -1 ? label.slice(idx + 1) : "unknown").trim().toLowerCase();
+
+      types.add(type);
+      const row = rows.get(workspace) || { workspace };
+      row[type] = (row[type] || 0) + (d.value || 0);
+      rows.set(workspace, row);
+    });
+
+    return { groupedData: Array.from(rows.values()), usedTypes: Array.from(types) };
+  }, [dynamicSourceData]);
 
   const { source: historyData = [], isLoading: isHistoryLoading } = useFetchPipelineHistory();
 
@@ -320,40 +385,95 @@ export default function Home() {
             </div>
 
             <CardContent className="p-4">
-              <div className="h-[300px] w-full bg-white rounded-lg">
-                {(() => {
-                  if (sourcesLoading) {
-                    return (
-                      <div className="flex items-center justify-center h-full text-[#2196F3] text-sm">
-                        Loading sources...
-                      </div>
-                    );
-                  }
+              <div className="h-[300px] w-full bg-white rounded-lg relative">
+                {sourcesLoading ? (
+                  <div className="flex items-center justify-center h-full text-[#2196F3] text-sm">
+                    Loading sources...
+                  </div>
+                ) : dynamicSourceData.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-sm text-gray-500">
+                    No data sources found in your workspace yet.
+                  </div>
+                ) : (
+                  <>
+                    {/* Color map */}
+                    {(() => {
+                      const sourceColorMap = {
+                        files: "#2196F3",
+                        blob: "#eeff00ff",
+                        rest: "#4CAF50",
+                        data: "#9C27B0",
+                        mongo: "#703a26ff",
+                        sql: "#FF9800",
+                        oracle: "#E91E63",
+                        postgres: "#3F51B5",
+                        edi: "#8BC34A",
+                        sharepoint: "#573196ff",
+                      };
 
-                  if (dynamicSourceData.length === 0) {
-                    return (
-                      <div className="flex items-center justify-center h-full text-sm text-gray-500">
-                        No data sources found in your workspace yet.
-                      </div>
-                    );
-                  }
+                      /* Types present (for legend) */
+                      const usedTypes = [
+                        ...new Set(
+                          dynamicSourceData.map((entry) => {
+                            const v = entry.source || "";
+                            const i = v.lastIndexOf(":");
+                            const raw = i !== -1 ? v.slice(i + 1) : v;
+                            return raw.trim().toLowerCase();
+                          })
+                        ),
+                      ];
 
-                  return (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={dynamicSourceData}
-                        layout="vertical"
-                        margin={{ top: 5, right: 10, left: 40, bottom: 5 }}
-                      >
-                        <CartesianGrid stroke="#eee" />
-                        <XAxis type="number" hide={!showSources} />
-                        <YAxis type="category" dataKey="source" tick={{ fontSize: 12 }} />
-                        <Tooltip />
-                        <Bar dataKey="value" fill="#2196F3" barSize={20} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  );
-                })()}
+                      return (
+                        <>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                              data={groupedData}
+                              layout="vertical"
+                              margin={{ top: showSources ? 36 : 8, right: 10, left: 40, bottom: 8 }}
+                              barCategoryGap="30%"
+                              barGap={2}
+                            >
+                              <CartesianGrid stroke="#eee" />
+                              <XAxis type="number" hide={!showSources} />
+                              <YAxis type="category" dataKey="workspace" tick={{ fontSize: 12 }} />
+                              <Tooltip
+                                formatter={(value, name) => [value, name.charAt(0).toUpperCase() + name.slice(1)]}
+                                labelFormatter={(ws) => ws}
+                              />
+                              {usedTypes.map((t) => (
+                                <Bar
+                                  key={t}
+                                  dataKey={t}
+                                  barSize={16}
+                                  fill={sourceColorMap[t] || "#90A4AE"}
+                                  radius={[2, 2, 2, 2]}
+                                />
+                              ))}
+                            </BarChart>
+                          </ResponsiveContainer>
+
+                          {/* legend overlay */}
+                          {showSources && (
+                            <div
+                              className="absolute top-2 right-3 flex flex-wrap items-center gap-4 text-sm rounded-md px-2 py-1"
+                              style={{ pointerEvents: "none", background: "rgba(255,255,255,0.8)" }}
+                            >
+                              {usedTypes.map((t) => (
+                                <span key={t} className="flex items-center gap-2">
+                                  <span
+                                    className="inline-block w-3.5 h-3.5 rounded-sm"
+                                    style={{ backgroundColor: sourceColorMap[t] || "#90A4AE" }}
+                                  />
+                                  <span className="capitalize">{t}</span>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
             </CardContent>
           </Card>
