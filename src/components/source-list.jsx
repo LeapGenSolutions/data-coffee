@@ -56,15 +56,14 @@ export default function SourceList({
   const itemsPerPage = 10;
 
   // Filter sources based on search term
-  const filteredSources = useMemo(() => {
-    const term = searchTerm.toLowerCase();
-    return sources.filter(
-      (source) =>
-        source.sourceName.toLowerCase().includes(term) ||
-        source.type.toLowerCase().includes(term) ||
-        source.status.toLowerCase().includes(term)
-    );
-  }, [sources, searchTerm]);
+const filteredSources = useMemo(() => {
+  const term = searchTerm.toLowerCase();
+  return sources.filter((source) =>
+    (source.configuration?.sourceName ?? "").toLowerCase().startsWith(term) ||
+    (source.configuration?.sourceType ?? "").toLowerCase().startsWith(term) ||
+    (source.status ?? "").toLowerCase().startsWith(term)
+  );
+}, [sources, searchTerm]);
 
   // Sort sources
   const sortedSources = useMemo(() => {
