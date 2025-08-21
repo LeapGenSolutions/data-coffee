@@ -243,7 +243,7 @@ function UserManagement() {
       setTechniqueToShow(null);
       return;
     }
-    if(source?.configuration?.sourceType === "files"){
+    if(source?.configuration?.sourceType === "files" || source?.configuration?.sourceType === "sharepoint"){
       setTechniqueToShow([
         { id: "Masking", label: "Masking" }
       ]);
@@ -473,7 +473,7 @@ function UserManagement() {
     if (currentStep === 3) {
       // Skip Processing Agent step unless source type is files
       const srcType = selectedSource?.configuration?.sourceType;
-      if (srcType === 'files') {
+      if (srcType === 'files' || srcType === 'sharepoint') {
         setCurrentStep(4);
       } else {
         setCurrentStep(5);
@@ -2057,7 +2057,7 @@ const confirmDelete = () => {
                 </>
               }
               
-              {currentStep === 4 && selectedSource?.configuration?.sourceType === 'files' && (
+              {currentStep === 4 && (selectedSource?.configuration?.sourceType === 'files' || selectedSource?.configuration?.sourceType === 'sharepoint') && (
                 <div className="space-y-6 py-6">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
                     <div className="border-b border-gray-300 pb-3 mb-4">
