@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "../components/ui/tabs";
-import { StatisticsCards } from "../components/statistics-cards";
 import { SourceForm } from "../components/source-form";
 import SourceList from "../components/source-list";
 import { ReportGrid } from "../components/report-grid";
@@ -8,9 +7,11 @@ import DashboardLayout from "../layouts/dashboard-layout";
 import { useSelector } from "react-redux";
 import useFetchSources from "../hooks/useFetchSources";
 import { useLocation } from "wouter";
-import useDeleteSource from '../hooks/useDeleteSource';
+import useDeleteSource from "../hooks/useDeleteSource";
 import WorkspaceForm from "../components/workspace-form";
-import { useUserWorkspaces } from "../hooks/useUserWorkspaces"; 
+import { useUserWorkspaces } from "../hooks/useUserWorkspaces";
+import DashboardKpis from "../components/ui/dashboard-kpis";
+import useDashboardKpis from "../hooks/useDashboardKpis";
 
 export default function AdminPanel() {
   const [location, setLocation] = useLocation();
@@ -21,37 +22,30 @@ export default function AdminPanel() {
   const editingId = isEdit ? location.split("/").pop() : null;
   const isAddWorkspace = location === "/admin/workspace";
 
-
   const currentUserEmail = useSelector((state) => state.me.me?.email);
   const { data: workspaces = [], refetch: refetchWorkspaces } = useUserWorkspaces(currentUserEmail);
   const [selectedWorkspace, setSelectedWorkspace] = useState(null);
   const { sources: fetchedSources, isLoading, error, refetch } = useFetchSources(selectedWorkspace?.id);
-
   const deleteSourceMutation = useDeleteSource();
-  
+  const { kpis, isLoading: kpisLoading } = useDashboardKpis();
+
   useEffect(() => {
     if (!isLoading) {
       setSources(fetchedSources);
     }
   }, [isLoading, fetchedSources]);
 
-  const editingSource = isEdit
-    ? sources.find((s) => String(s.id) === editingId)
-    : null;
-  //console.log("Selected workspace ID:", selectedWorkspace?.id);
+  const editingSource = isEdit ? sources.find((s) => String(s.id) === editingId) : null;
 
-  // Set default workspace
   useEffect(() => {
-  if (
-    Array.isArray(workspaces) &&
-    workspaces.length > 0 &&
-    (!selectedWorkspace?.id || !workspaces.some(ws => ws.id === selectedWorkspace.id))
-  ) {
-    setSelectedWorkspace(workspaces[0]); 
-  }
+    if (
+      Array.isArray(workspaces) &&
+      workspaces.length > 0 &&
+      (!selectedWorkspace?.id || !workspaces.some(ws => ws.id === selectedWorkspace.id))
+    ) {
+      setSelectedWorkspace(workspaces[0]);
+    }
   }, [workspaces, selectedWorkspace, selectedWorkspace?.id]);
-
-  // Fetch data sources from Cosmos
 
   const handleSourceSaved = () => {
     refetch();
@@ -70,48 +64,49 @@ export default function AdminPanel() {
   };
 
   const handleWorkspaceCreated = async (newWorkspace) => {
-  try {
-    const result = await refetchWorkspaces();
-    const updatedWorkspaces = Array.isArray(result.data) ? result.data : [];
-    const matched = updatedWorkspaces.find(ws => ws.id === newWorkspace.id);
-    if (matched) {
-      setSelectedWorkspace(matched);
-    } else if (updatedWorkspaces.length > 0) {
-      setSelectedWorkspace(updatedWorkspaces[0]);
-    } else {
+    try {
+      const result = await refetchWorkspaces();
+      const updatedWorkspaces = Array.isArray(result.data) ? result.data : [];
+      const matched = updatedWorkspaces.find(ws => ws.id === newWorkspace.id);
+      if (matched) {
+        setSelectedWorkspace(matched);
+      } else if (updatedWorkspaces.length > 0) {
+        setSelectedWorkspace(updatedWorkspaces[0]);
+      } else {
+        setSelectedWorkspace(null);
+      }
+
+      setLocation("/admin");
+    } catch (err) {
+      console.error("Failed to refetch workspaces:", err);
       setSelectedWorkspace(null);
     }
-
-    setLocation("/admin");
-  } catch (err) {
-    console.error("Failed to refetch workspaces:", err);
-    setSelectedWorkspace(null);
-  }
-  }; 
+  };
 
   return (
     <DashboardLayout>
       <div className="max-w-7xl mx-auto">
-        <StatisticsCards />
+        {!kpisLoading && <DashboardKpis kpis={kpis} />}
 
         <Tabs defaultValue="setup" className="space-y-6">
           <TabsContent value="setup" className="space-y-6">
-            {isAdd || isEdit || isAddWorkspace  ? (
+            {isAdd || isEdit || isAddWorkspace ? (
               isAddWorkspace ? (
                 <WorkspaceForm onWorkspaceCreated={handleWorkspaceCreated} />
               ) : (
-              <SourceForm
-                initialSource={editingSource}
-                mode={isEdit ? "edit" : "add"}
-                onSourceSaved={() => {
-                  handleSourceSaved();
-                }}
-                onCancel={() => {
-                  setLocation("/admin");
-                }}
-                currentWorkspace={selectedWorkspace}
-              />
-            )) : isLoading ? (
+                <SourceForm
+                  initialSource={editingSource}
+                  mode={isEdit ? "edit" : "add"}
+                  onSourceSaved={() => {
+                    handleSourceSaved();
+                  }}
+                  onCancel={() => {
+                    setLocation("/admin");
+                  }}
+                  currentWorkspace={selectedWorkspace}
+                />
+              )
+            ) : isLoading ? (
               <div className="text-gray-500">Loading sources...</div>
             ) : error ? (
               <div className="text-red-500">Failed to load sources</div>
