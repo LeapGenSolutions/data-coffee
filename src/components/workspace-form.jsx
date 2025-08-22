@@ -126,15 +126,23 @@ export default function WorkspaceForm({ onWorkspaceCreated }) {
             )}
 
             {/* Submit */}
-            <CardFooter className="pt-4">
-              <Button
-                type="submit"
-                disabled={saveWorkspace.isLoading}
-                className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
-              >
-                {saveWorkspace.isLoading ? "Saving..." : "Add Workspace"}
-              </Button>
-            </CardFooter>
+            <CardFooter className="pt-4 flex justify-end gap-4">
+            <Button
+              onClick={() => navigate("/admin")}
+              className="text-gray-700 border border-gray-300 hover:bg-gray-100"
+              variant="outline"
+            >
+              Cancel
+            </Button>
+            
+            <Button
+              type="submit"
+              disabled={saveWorkspace.isLoading}
+              className="bg-[#2196F3] hover:bg-[#1976D2] text-white flex items-center gap-2 rounded-lg"
+            >
+              {saveWorkspace.isLoading ? "Saving..." : "Add Workspace"}
+            </Button>
+          </CardFooter>
           </form>
         </Form>
       </CardContent>
