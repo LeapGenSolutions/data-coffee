@@ -495,13 +495,15 @@ export function SourceForm({ mode = "add", initialSource,
     const sourceTypeName =
       {
         sql: "SQL Database",
-        oracle: "Oracle Database",
-        postgresql: "PostgreSQL Database",
-        mongodb: "MongoDB",
-        files: "File System",
+        oracle: "Oracle DB",
+        postgresql: "PostgreSQL",
+        mongodb: "Mongo DB",
+        files: "Files",
         blob: "Blob Storage",
         rest: "REST API",
         datawarehouse: "Data Warehouse",
+        edi: "EDI",
+        sharepoint: "SharePoint",
       }[data.sourceType] || data.sourceType;
 
     const locationName = data.location === "on-prem" ? "On-Premises" : "Cloud";
@@ -536,10 +538,164 @@ export function SourceForm({ mode = "add", initialSource,
                   {locationName}
                 </p>
               </div>
+              {/* SQL Database */}
+              {sourceTypeName === "SQL Database" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Host name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.host || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Port</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.port || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Authentication Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Username</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.username || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Password</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.password || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Database Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.dbName || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Driver</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.driver || '—'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Cloud Provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.cloudProvider || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Connection String</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.connectionString || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Port</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.port || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">SSL Required</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.sslRequired ? 'Yes' : 'No'}</p></div>
+                </>
+              ))}
+              {/* Oracle Database */}
+              {sourceTypeName === "Oracle DB" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Host Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.host || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Port</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.port || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">TNS Alias</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.tnsAlias || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">User name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.username || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Password</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.password || '—'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Cloud provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.cloudProvider || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Connection Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.connectionType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                </>
+              ))}
+              {/* PostgreSQL Database */}
+              {sourceTypeName === "PostgreSQL" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Host name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.host || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Port</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.port || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Username</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.username || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Password</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.password || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Database Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.dbName || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">SSL Connection</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.ssl ? 'Enabled' : 'Disabled'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.provider || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Method</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authMethod || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Hostname</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.hostname || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">SSL Required</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.sslRequired ? 'Yes' : 'No'}</p></div>
+                </>
+              ))}
+              {/* MongoDB */}
+              {sourceTypeName === "Mongo DB" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Host/IP</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.host || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Port</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.port || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Bind IPs</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.bindIPs || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">SSL</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.ssl ? 'Enabled' : 'Disabled'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.provider || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Connection String</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.connectionString || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">SSL Always On</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.sslAlwaysOn ? 'Yes' : 'No'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">VPC Peering</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.vpcPeering ? 'Enabled' : 'Disabled'}</p></div>
+                </>
+              ))}
+              {/* REST API */}
+              {sourceTypeName === "REST API" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">API URL</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.apiUrl || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Method</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authMethod || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">VPN Required</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.vpnRequired ? 'Yes' : 'No'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">CORS/Internal Access Notes</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.corsNotes || '—'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">API URL</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.apiUrl || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Method</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authMethod || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Rate Limiting</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.rateLimiting || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">CORS Always Enforced</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.corsEnabled ? 'Yes' : 'No'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">HTTPS Mandatory</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.httpsOnly ? 'Yes' : 'No'}</p></div>
+                </>
+              ))}
+              {/* Blob Storage */}
+              {sourceTypeName === "Blob Storage" && (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Cloud Provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.cloudProvider || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Bucket/Container Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.bucketName || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Access Method</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.accessMethod || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Endpoint Override</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.endpoint || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Encryption at Rest</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.encryptionAtRest ? 'Enabled' : 'Disabled'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Encryption in Transit</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.encryptionInTransit ? 'Enabled' : 'Disabled'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">HTTPS Only Protocol</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.httpsOnly ? 'Yes' : 'No'}</p></div>
+                </>
+              )}
+              {/* Data Warehouse */}
+              {sourceTypeName === "Data Warehouse" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Data Warehouse Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.warehouseType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Host</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.host || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Port</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.port || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Connection String</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.connectionString || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Method</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authMethod || '—'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Cloud Provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.provider || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Method</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authMethod || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Account ID / Project ID</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.accountId || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Database Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.database || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Schema Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.schema || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">SSL Required</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.sslRequired ? 'Yes' : 'No'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">VPC Peering</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.vpcPeering ? 'Enabled' : 'Disabled'}</p></div>
+                </>
+              ))}
+              {/* File System */}
+              {sourceTypeName === "Files" && (locationName === "On-Premises" ? (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">File Path</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.filePath || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Access Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.accessType || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Mount Path</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.mountPath || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                  {data.authType === 'basic' && (
+                    <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Variable Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.variableName || '—'}</p></div>
+                  )}
+                  {data.authType === 'sas' && (
+                    <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Connection String</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.connectionString || '—'}</p></div>
+                  )}
+                  {data.authType === 'keyvault' && (
+                    <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Secret Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.secretName || '—'}</p></div>
+                  )}
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">File Format</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.fileFormat || '—'}</p></div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Cloud Provider</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.cloudProvider || '—'}</p></div>
+                  {data.cloudProvider === 'azure' && (
+                    <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Storage Account Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.storageAccountName || '—'}</p></div>
+                  )}
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Container Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.containerName || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Path Prefix</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.pathPrefix || '—'}</p></div>
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Auth Type</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.authType || '—'}</p></div>
+                  {data.authType === 'sas' && (
+                    <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Connection String</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.connectionString || '—'}</p></div>
+                  )}
+                  {data.authType === 'keyvault' && (
+                    <div className="space-y-1"><p className="text-sm font-medium text-gray-700">Secret Name</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.secretName || '—'}</p></div>
+                  )}
+                  <div className="space-y-1"><p className="text-sm font-medium text-gray-700">File Format</p><p className="text-sm text-gray-900 bg-white p-2 rounded border border-gray-200">{data.fileFormat || '—'}</p></div>
+                </>
+              ))}
             </div>
-
-
-
             <div className="bg-white p-4 rounded-md border border-gray-200">
               <h4 className="text-md font-medium mb-2 text-gray-900 flex items-center gap-2">
                 <CheckCircle className="h-4 w-4 text-green-600" />
