@@ -54,6 +54,7 @@ import {
   DropdownMenuItem
 } from "../components/ui/dropdown-menu";
 import SurroundAIWidget from './surroundAI-widget';
+import PromptStudioWidget from './prompt-studio-widget';
 import { CSSTransition } from 'react-transition-group';
 import useFetchSources from "../hooks/useFetchSources";
 import useSavePipeline from "../hooks/useSavePipeline";
@@ -116,6 +117,7 @@ function UserManagement() {
   const [isEditing, setIsEditing] = useState(false);
   const [enableSurroundAI, setEnableSurroundAI] = useState(false);
   const [showSurroundAI, setShowSurroundAI] = useState(false);
+  const [showPromptStudio, setShowPromptStudio] = useState(false);
   const [pipelineForWidget, setPipelineForWidget] = useState(null);
   const [showSurroundAIConfig, setShowSurroundAIConfig] = useState(false);
   const workspaces = useSelector((state) => state.workspaces.workspaces);
@@ -695,6 +697,12 @@ const handleBack = () => {
     setShowPromptListModal(false);
   };
 
+  const handleOpenPromptStudio = (pipeline) => {
+    setShowPromptStudio(true);
+    setPipelineForWidget(pipeline);
+    setShowPromptListModal(false);
+  };
+
  const handleTechniqueToggle = (technique) => {
   setSelectedTechniques((prev) => {
     const updated = prev.includes(technique)
@@ -807,6 +815,12 @@ const confirmDelete = () => {
       suggestedPrompt: {
         title: "Enhance Data Quality",
         description: "Improve data validation and cleansing processes to assure high-quality analytics.",
+        content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
+        timestamp: "2024-07-01 10:00",
+      },
+      promptStudioPrompt: {
+        title: "Enhance Using Prompt Studio",
+        description: "Improve data validation and cleansing processes Using Prompt Studio.",
         content: "Improve data validation and cleansing processes to ensure high-quality medical records with standardized formats and complete patient information.",
         timestamp: "2024-07-01 10:00",
       },
@@ -2664,7 +2678,7 @@ const confirmDelete = () => {
               </DialogHeader>
               {promptPipeline &&
                 (() => {
-                  const { surroundAIPrompt, suggestedPrompt} =
+                  const { surroundAIPrompt, suggestedPrompt, promptStudioPrompt } =
                     getPipelinePrompts(promptPipeline);
                   return (
                     <>
@@ -2704,6 +2718,27 @@ const confirmDelete = () => {
                               onClick={() => handleOpenSurroundAI(promptPipeline)}
                             >
                               Open Surround AI
+                            </Button>
+                          </span>
+                        </div>
+
+                        <div className="bg-blue-50 rounded-lg border border-blue-200 shadow p-5 flex items-start gap-4 mb-4">
+                          <span className="flex-shrink-0 bg-purple-100 rounded-full p-3 flex items-center justify-center">
+                            <Sparkles className="h-6 w-6 text-purple-500" />
+                          </span>
+                          <span className="flex-1">
+                            <div className="font-bold text-gray-900 text-lg mb-1">
+                              {promptStudioPrompt.title}
+                            </div>
+                            <div className="text-sm text-gray-700 mb-3">
+                              {promptStudioPrompt.description}
+                            </div>
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
+                              onClick={() => handleOpenPromptStudio(promptPipeline)}
+                            >
+                              Open Prompt Studio
                             </Button>
                           </span>
                         </div>
@@ -2923,6 +2958,9 @@ const confirmDelete = () => {
           </Dialog>
           {showSurroundAI && pipelineForWidget && (
             <SurroundAIWidget pipeline={pipelineForWidget} onClose={() => setShowSurroundAI(false)} />
+          )}
+          {showPromptStudio && (
+            <PromptStudioWidget pipeline={pipelineForWidget} onClose={() => setShowPromptStudio(false)} />
           )}
         </>
       )}
